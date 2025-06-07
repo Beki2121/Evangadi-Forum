@@ -1,25 +1,24 @@
 /* Container Styles */
 .container {
-width: 100%;
-display: flex;
-justify-content: center;
-align-items: center;
-
-}
-.mainContainer{
+  width: 100%;
   display: flex;
-flex-direction: column;
-width: 80%;
-padding: 30px 0;
+  justify-content: center;
+  align-items: center;
+}
+.mainContainer {
+  display: flex;
+  flex-direction: column;
+  width: 80%;
+  padding: 30px 0;
 }
 
-.questionTitle{
+.questionTitle {
   font-weight: 700;
   font-size: 30px;
   color: black !important;
 }
 
-.questionDescription{
+.questionDescription {
   /* margin-left: 40px; */
   font-size: 20px;
   line-height: 1.6;
@@ -29,7 +28,7 @@ padding: 30px 0;
   color: black;
 }
 
-.answer_holder{
+.answer_holder {
   display: flex;
   justify-content: flex-start;
   align-items: center;
@@ -39,9 +38,7 @@ padding: 30px 0;
   border-radius: 5px;
   gap: 30px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
-
 }
-
 
 /* .answer_holder:hover{
 background-color: var(--blue-shade);
@@ -56,7 +53,7 @@ transition: all ease-in-out .5s;
   color: black;
 }
 
-.answer_date{
+.answer_date {
   font-size: 14px;
   text-align: left;
   color: #555 !important;
@@ -86,13 +83,12 @@ transition: all ease-in-out .5s;
   gap: 8px;
 }
 
-
 .profileName {
   font-size: 16px;
   font-weight: 600;
 }
 
-.account_holder{
+.account_holder {
   width: 100px;
   padding: 10px;
   display: flex;
@@ -102,10 +98,7 @@ transition: all ease-in-out .5s;
   align-items: center;
   gap: 5px;
   /* background-color: black; */
-
 }
-
-
 
 /* Answer Form Styles */
 .answerFormSection {
@@ -139,18 +132,16 @@ transition: all ease-in-out .5s;
   border: 1.5px solid var(--blue-shade);
   font-size: 16px;
   color: #333 !important;
-
 }
 
-.answerInput:focus{
+.answerInput:focus {
   border: 1.5px solid var(--primary-color) !important;
   outline: none;
-  transition: all ease-in-out .3s;
+  transition: all ease-in-out 0.3s;
   color: orange;
-  border:none;
+  border: none;
   border: 1.5px solid orange;
 }
-
 
 .postAnswerButton {
   background-color: var(--blue-shade);
@@ -175,3 +166,43 @@ transition: all ease-in-out .5s;
 /* .answerTextContainer:hover {
   background-color: #f7f7f7;
 } */
+
+/* In answer.module.css */
+
+.answerContentArea {
+  flex: 1; /* Allows this area to take up remaining space */
+  padding-left: 15px; /* Adjust as needed for spacing from profile pic */
+}
+
+.ratingSection {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Space between buttons and count */
+  margin-top: 10px; /* Space from the answer text above */
+  padding-top: 5px;
+  border-top: 1px solid #eee; /* Optional separator */
+}
+
+.ratingButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(
+    --text-color
+  ); /* Use a variable from your global CSS if you have one */
+  transition: color 0.2s ease-in-out;
+}
+
+.ratingButton:hover {
+  color: var(--blue-shade); /* Highlight on hover, use your accent color */
+}
+
+.ratingCount {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: var(--dark-grey); /* Or any color you prefer */
+}

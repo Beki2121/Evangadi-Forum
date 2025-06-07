@@ -9,4 +9,5 @@ const dbConnection = mysql2.createPool({
   connectionLimit: process.env.CONNECTION_LIMIT,
   host: process.env.DB_HOST,
 });
+
 module.exports = dbConnection.promise();

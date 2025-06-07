@@ -34,91 +34,93 @@ async function postQuestion(req, res) {
       .status(StatusCodes.CREATED)
       .json({ message: "question posted successfully" });
   } catch (err) {
-    //    console.log(err);
+    console.error(err); // Use console.error for errors
     return res
-      .status(500)
-      .json({ message: "something went wrong, please try again later" + err });
+      .status(StatusCodes.INTERNAL_SERVER_ERROR) // Use StatusCodes for consistency
+      .json({ message: "Something went wrong, please try again later" });
   }
 }
 
-// get all questions
+// get all questions -- CORRECTED FUNCTION
 async function getAllQuestions(req, res) {
   try {
-    const [questions] =
-      await dbConnection.query(`select q.questionid, q.title, q.description,q.createdAt, u.username from questions q   
-     inner join users u on q.userid = u.userid  order by q.createdAt desc`);
+    const [questions] = await dbConnection.query(`SELECT
+            q.questionid,
+            q.title,
+            q.description,
+            q.createdAt,
+            u.username
+        FROM questions q
+        INNER JOIN users u ON q.userid = u.userid
+        ORDER BY q.createdAt DESC`); // Removed extra spaces/invisible characters
     return res.status(StatusCodes.OK).json({
       message: questions,
     });
   } catch (err) {
-    console.log(err);
+    console.error(err);
     return res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ message: "something went wrong, please try again later" });
+      .json({ message: "Something went wrong, please try again later" });
   }
 }
 
-// get single question and answers
+// get single question and answers (already corrected in previous response)
 async function getQuestionAndAnswer(req, res) {
   const questionid = req.params.questionId;
 
   try {
-    const [rows] = await dbConnection.query(
-      `SELECT 
-          q.questionid, 
-          q.title, 
-          q.description, 
-          q.createdAt AS question_createdAt,
-          u2.username as question_username,
-          a.answerid, 
-          a.userid AS answer_userid, 
-          a.answer,
-          a.createdAt,
-          u.username as answer_username
-       FROM 
-          questions q   
-       LEFT JOIN 
-          answers a ON q.questionid = a.questionid
-          LEFT JOIN users u on u.userid = a.userid
-          left join users u2 on u2.userid = q.userid
-       WHERE 
-          q.questionid = ?
-          order by a.createdAt desc
-          `,
+    const [questionRows] = await dbConnection.query(
+      `SELECT
+          q.questionid,
+          q.title,
+          q.description,
+          q.createdAt AS qtn_createdAt,
+          u.username AS qtn_username
+       FROM questions q
+       INNER JOIN users u ON q.userid = u.userid
+       WHERE q.questionid = ?`,
       [questionid]
     );
 
-    // Check if the question exists
-    if (rows.length === 0) {
+    if (questionRows.length === 0) {
       return res
-        .status(StatusCodes.BAD_REQUEST)
+        .status(StatusCodes.NOT_FOUND)
         .json({ message: "Question not found" });
     }
 
-    // Reshape the data to include answers under the question
-    const questionDetails = {
-      id: rows[0].questionid,
-      title: rows[0].title,
-      description: rows[0].description,
-      qtn_createdAt: rows[0].question_createdAt,
-      qtn_username: rows[0].question_username,
-      answers: rows
-        .map((answer) => ({
-          answerid: answer.answerid,
-          userid: answer.answer_userid,
-          username: answer.answer_username,
-          answer: answer.answer,
-          createdAt: answer.createdAt,
-        }))
-        .filter((answer) => answer.answerid !== null), // Filter out any null answers
-    };
+    const questionDetails = questionRows[0];
+
+    const [answersRows] = await dbConnection.query(
+      `SELECT
+          a.answerid,
+          a.userid,
+          a.answer,
+          a.createdAt,
+          a.rating_count,
+          u.username AS answer_username
+       FROM answers a
+       INNER JOIN users u ON a.userid = u.userid
+       WHERE a.questionid = ?
+       ORDER BY a.createdAt DESC`,
+      [questionid]
+    );
+
+    questionDetails.answers = answersRows.map((answer) => ({
+      answerid: answer.answerid,
+      userid: answer.userid,
+      username: answer.answer_username,
+      answer: answer.answer,
+      createdAt: answer.createdAt,
+      rating_count: answer.rating_count,
+    }));
 
     res.status(StatusCodes.OK).json(questionDetails);
   } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ message: "Error fetching question details" + error });
+    console.error("Error fetching question details:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      message: "Error fetching question details. Please try again later.",
+    });
   }
 }
+
 module.exports = { postQuestion, getAllQuestions, getQuestionAndAnswer };
