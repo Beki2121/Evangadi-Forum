@@ -1,9 +1,12 @@
-import  { useState } from "react";
-
+import { useState } from "react";
 import classes from "./signUp.module.css";
 import { Link } from "react-router-dom";
 import { axiosInstance } from "../../utility/axios";
 import Swal from "sweetalert2";
+
+// Import Font Awesome icons
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 
 function Signup({ onSwitch }) {
   const [error, setError] = useState(null); // for error message
@@ -74,7 +77,7 @@ function Signup({ onSwitch }) {
         password: formData.password,
       });
       setSuccess("success");
-    
+
       if (response.status === 201) {
         setError(null); // Clear any previous errors
 
@@ -113,7 +116,7 @@ function Signup({ onSwitch }) {
           setError("An error occurred during login. Please try again.");
         }
       } else {
-        setError(response.data.Msg); 
+        setError(response.data.Msg);
         await Swal.fire({
           title: "Error",
           text: error || "Error submitting the form. Please try again.",
@@ -139,7 +142,6 @@ function Signup({ onSwitch }) {
     }
   };
 
- 
   return (
     <div className={classes.formcontainer}>
       <h2>Join the network</h2>
@@ -202,8 +204,17 @@ function Signup({ onSwitch }) {
             type="button"
             onClick={handleTogglePassword}
             className={classes.togglebtn}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "0 5px", // Adjust padding as needed
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
-            {showPassword ? "🙉" : "🙈"}
+            <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} />
           </button>
           <div style={{ padding: "5px", fontSize: "14px" }}>
             I agree to the <Link to="/privacyPolicy">privacy policy</Link> and{" "}

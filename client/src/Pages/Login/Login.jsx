@@ -3,6 +3,11 @@ import { axiosInstance } from "../../utility/axios.js";
 import classes from "./login.module.css";
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
+
+// Import Font Awesome icons
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+
 function Login({ onSwitch }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -112,8 +117,20 @@ function Login({ onSwitch }) {
               onChange={handleChange}
               required
             />
-            <button type="button" onClick={handleTogglePassword} style={{}}>
-              {showPassword ? "🙉" : "🙈"}
+            <button
+              type="button"
+              onClick={handleTogglePassword}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "0 5px", // Adjust padding as needed
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} />
             </button>
           </div>
           <p className={classes.forgotpasswordtext}>
