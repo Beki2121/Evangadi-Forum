@@ -1,17 +1,21 @@
-import  { useContext, useRef } from "react";
+import { useContext, useRef, useState } from "react"; // Import useState
 import classes from "./askQuestion.module.css";
 import { axiosInstance } from "../../../utility/axios";
 import { Link, useNavigate } from "react-router-dom";
 import Layout from "../../../Layout/Layout.jsx";
 import { UserState } from "../../../App.jsx";
-// this is imported for bootstrap sweet alert
 import Swal from "sweetalert2";
+
+// Import the Chatbot component
+import Chatbot from "../../../components/Chatbot/Chatbot.jsx";
 
 function AskQuestion() {
   const navigate = useNavigate();
   const { user } = useContext(UserState);
 
-  // const navigate = useNavigate();
+  // State to control chatbot visibility
+  const [showChatbot, setShowChatbot] = useState(false); // Initialize as hidden
+
   const titleDom = useRef();
   const descriptionDom = useRef();
   const userId = user?.userid;
@@ -20,12 +24,11 @@ function AskQuestion() {
   async function handleSubmit(e) {
     e.preventDefault();
     const title = titleDom.current.value;
-    const description = descriptionDom.current.value; 
+    const description = descriptionDom.current.value;
     const userid = userId;
-    const tag = "General";
+    const tag = "General"; // Or allow user to select/input tags
 
     try {
-      // Make a POST request to your server to create a new question
       const response = await axiosInstance.post("/question", {
         userid,
         title,
@@ -60,6 +63,11 @@ function AskQuestion() {
       });
     }
   }
+
+  // Function to toggle chatbot visibility
+  const toggleChatbotVisibility = () => {
+    setShowChatbot((prev) => !prev);
+  };
 
   return (
     <Layout>
@@ -125,10 +133,40 @@ function AskQuestion() {
                     Back to Home
                   </button>
                 </Link>
+                {/* Modified button to toggle chatbot visibility */}
+                <button
+                  className={classes.question__btn}
+                  type="button"
+                  onClick={toggleChatbotVisibility} // Add onClick handler
+                >
+                  {showChatbot ? "Hide Chatbot" : "Ask Chatbot"}{" "}
+                  {/* Change button text dynamically */}
+                </button>
               </div>
             </form>
           </div>
         </div>
+
+        {/* --- AI Chatbot Integration (Conditionally Rendered) --- */}
+        {showChatbot && ( // Only render if showChatbot is true
+          <>
+            {/* <hr className={classes.sectionSeparator} />{" "} */}
+            {/* Add a separator for clarity */}
+            <div className={classes.aiChatSection}>
+              <h3 className={classes.question__header__title}>
+                <span className={classes.highlight}>
+                  Get AI Assistance for Your Question
+                </span>
+              </h3>
+              <p className={classes.aiChatPrompt}>
+                Need help formulating your question? Ask our AI assistant for
+                suggestions, clarity, or related concepts!
+              </p>
+              <Chatbot />
+            </div>
+          </>
+        )}
+        {/* --- End AI Chatbot Integration --- */}
       </div>
     </Layout>
   );

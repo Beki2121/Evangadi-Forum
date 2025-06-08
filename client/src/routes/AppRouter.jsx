@@ -6,8 +6,9 @@ import ForgotPassword from "../Pages/ForgotPassword/ForgotPassword.jsx";
 import PageNotFound from "../Pages/PageNotFound/PageNotFound.jsx";
 import PrivacyPolicy from "../Pages/PrivacyPolicy/PrivacyPolicy.jsx";
 import Home from "../Pages/Home/Home.jsx";
-import AuthLayout from '../Pages/AuthLayout/AuthLayout.jsx'
-import HowItWorks from '../Pages/HowItWorks/HowItWorks.jsx'
+import AuthLayout from "../Pages/AuthLayout/AuthLayout.jsx";
+import HowItWorks from "../Pages/HowItWorks/HowItWorks.jsx";
+import Chatbot from "../components/Chatbot/Chatbot.jsx";
 
 function AppRouter() {
   return (
@@ -20,6 +21,7 @@ function AppRouter() {
       <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
       <Route path="/auth" element={<AuthLayout />} />
       <Route path="/forgetPass" element={<ForgotPassword />} />
+      <Route path="/chatbot" element={<Chatbot />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

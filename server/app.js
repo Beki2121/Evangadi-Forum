@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const authMiddleware = require("./middleware/authMiddleware");
+const aiRoutes = require("./routes/aiRoutes");
 const cors = require("cors");
 
 const dotenv = require("dotenv");
@@ -34,7 +35,7 @@ const userRoutes = require("./routes/userRoutes");
 
 // user routes middleware
 app.use("/api/v1/user", userRoutes);
-
+app.use('/api/ai', aiRoutes); // Example base path for AI routes
 // questions routes middleware file import
 const questionRoutes = require("./routes/questionRoute");
 // questions routes middleware

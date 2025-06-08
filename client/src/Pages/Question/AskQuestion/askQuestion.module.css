@@ -1,11 +1,13 @@
-.allContainer{
-  width:100%;
+.allContainer {
+  width: 100%;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start; /* Changed from center to flex-start to align them to the top, which might look better */
+  gap: 30px; /* Add this or adjust if already present. Try a smaller value like 20px, 30px, 40px */
   background:url("../../../assets/Images/howitworkbg.jpg");
   background-repeat: no-repeat;
   background-size: cover;
+  padding: 20px; /* Add some padding to the container itself if items are too close to edges */
 }
 
 .question__container {
@@ -103,4 +105,13 @@
   outline: none;
   border: 1.5px solid var(--primary-color) !important;
 
+}
+.aiChatSection {
+  width: 100%;
+  max-width: 400px; /* Adjust this value as needed, e.g., 500px, 600px */
+  /* You might also want some padding here */
+  padding: 20px;
+  background-color: #f9f9f9; /* Or match your questionContainer background */
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Optional: add a subtle shadow */
 }
