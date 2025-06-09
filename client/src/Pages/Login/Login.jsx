@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useContext } from "react"; // Import useContext
 import { axiosInstance } from "../../utility/axios.js";
 import classes from "./login.module.css";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate
 import Swal from "sweetalert2";
 
 // Import Font Awesome icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+
+// Import your UserState context
+import { UserState } from "../../App.jsx"; // Adjust path if necessary
 
 function Login({ onSwitch }) {
   const [error, setError] = useState(null);
@@ -17,6 +20,9 @@ function Login({ onSwitch }) {
     usernameOrEmail: "",
     password: "",
   });
+
+  const navigate = useNavigate(); // Initialize useNavigate
+  const { login } = useContext(UserState); // Get the login function from context
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -38,38 +44,51 @@ function Login({ onSwitch }) {
         usernameOrEmail: formData.usernameOrEmail,
         password: formData.password,
       });
-      // console.log(response.data)
-      localStorage.setItem("EV-Forum-token-G3-APR2024", response.data.token); // Store the token in local storage
-      window.location.href = "/"; // This will navigate to the / page and refresh the application
+
       if (response.status === 200) {
+        // --- CRUCIAL CHANGE HERE ---
+        // Call the login function from context
+        // Assuming your backend returns { user: { userid: '...', ... }, token: '...' }
+        const { token, user } = response.data;
+        login(user, token); // Pass user data and token to the context's login function
+
         setSuccess("Login successful! Redirecting...");
         await Swal.fire({
           title: "Success!",
-          text: "User Loggedin successfully!",
+          text: "User Logged in successfully!",
           icon: "success",
           confirmButtonText: "OK",
         });
         setError(null);
+        navigate("/"); // Use navigate from react-router-dom for smoother navigation
+        // This will trigger App.jsx's useEffect to fetch user data
+        // which will then update the user context.
       } else {
-        setError(response.data.msg || "Login failed.");
+        // This 'else' block for response.status is less common with Axios for non-2xx codes,
+        // as Axios usually throws an error for those, sending execution to the `catch` block.
+        setError(response.data.msg || "Login failed due to unexpected status.");
         await Swal.fire({
           title: "Error",
-          text:
-            response.data.msg || "Error submitting the form. Please try again",
+          text: response.data.msg || "Error logging in. Please try again.",
           icon: "error",
           confirmButtonText: "OK",
         });
         setSuccess(null);
       }
     } catch (err) {
-      setError(
-        err.response?.data?.msg || "Error logging in. Please try again." + err
-      );
+      console.error("Login error:", err); // Log the full error object for debugging
+
+      let errorMessage = "Error logging in. Please try again.";
+      if (err.response && err.response.data && err.response.data.msg) {
+        errorMessage = err.response.data.msg;
+      } else if (err.message) {
+        errorMessage = err.message; // Fallback to generic Axios error message
+      }
+
+      setError(errorMessage);
       await Swal.fire({
         title: "Error",
-        text:
-          err.response?.data?.msg ||
-          "Error submitting the form. Please try again",
+        text: errorMessage,
         icon: "error",
         confirmButtonText: "OK",
       });
