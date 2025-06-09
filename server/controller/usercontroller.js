@@ -1,10 +1,13 @@
 const dbConnection = require("../config/dbConfig");
 const bcrypt = require("bcrypt");
-const { use } = require("bcrypt/promises");
+// const { use } = require("bcrypt/promises");
 const { StatusCodes } = require("http-status-codes");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
+
+const authMiddleware = require("../middleware/authMiddleware.js");
+// Middleware to check if the user is authenticated
 
 async function register(req, res) {
   const { username, firstname, lastname, email, password } = req.body;
