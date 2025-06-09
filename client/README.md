@@ -2,7 +2,6 @@
 
 ## project collaboration links
 
-- click up https://app.clickup.com/9012989170/v/l/8ckek7j-272
 - Github Repo https://github.com/Beki2121/Evangadi-Forum
 
 test for branching
