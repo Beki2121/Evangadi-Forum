@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import axios from "axios"; // Assuming you use axios
-import styles from "./Chatbot.module.css"; // Create this CSS module
+import axios from "axios";
+import styles from "./Chatbot.module.css";
 
 const Chatbot = () => {
   const [messages, setMessages] = useState([]); // Stores [{ role: 'user', parts: '...' }, { role: 'model', parts: '...' }]
@@ -8,7 +8,7 @@ const Chatbot = () => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const API_URL = "http://localhost:5000/api/ai/chat"; 
+  const API_URL = "http://localhost:5000/api/ai/chat";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,15 +29,16 @@ const Chatbot = () => {
 
     try {
       // Prepare history for conversational context
-      // Gemini's history format expects objects with 'role' and 'parts'
+      // This format is what your frontend `messages` state holds.
+      // Your backend's `aicontroller.js` will then re-map this to the Gemini SDK's expected format.
       const conversationHistory = messages.map((msg) => ({
         role: msg.role,
-        parts: [{ text: msg.parts }], // Gemini expects text in parts array
+        parts: msg.parts, // Keep as string for now, backend will handle `[{ text: '...' }]` conversion
       }));
 
       const response = await axios.post(API_URL, {
-        message: userMessage.parts, // Send only the new user message content
-        history: conversationHistory, // Send the full history
+        message: userMessage.parts, // Send the new user message content as a string
+        history: conversationHistory, // Send the full history as your state holds it
       });
 
       const aiReply = { role: "model", parts: response.data.reply };
