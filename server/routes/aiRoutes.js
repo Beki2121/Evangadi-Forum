@@ -1,8 +1,17 @@
+// routes/aiRoutes.js
+
 const express = require("express");
 const router = express.Router();
-const { chatWithAI } = require("../controller/aiController"); // Correctly destructures the function
+// Import all three functions
+const {
+  chatWithAI,
+  getChatHistory,
+  getAllChatSessions,
+} = require("../controller/aiController");
 
-// Route for AI chat
-router.post("/chat", chatWithAI); // chatWithAI is now the function
+router.post("/chat", chatWithAI);
+router.get("/history", getChatHistory);
+
+router.get("/sessions", getAllChatSessions); // Add this new route
 
 module.exports = router;

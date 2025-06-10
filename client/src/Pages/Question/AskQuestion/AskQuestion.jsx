@@ -1,4 +1,4 @@
-import { useContext, useRef, useState } from "react"; // Import useState
+import { useContext, useRef, useState } from "react";
 import classes from "./askQuestion.module.css";
 import { axiosInstance } from "../../../utility/axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -6,15 +6,13 @@ import Layout from "../../../Layout/Layout.jsx";
 import { UserState } from "../../../App.jsx";
 import Swal from "sweetalert2";
 
-// Import the Chatbot component
 import Chatbot from "../../../components/Chatbot/Chatbot.jsx";
 
 function AskQuestion() {
   const navigate = useNavigate();
   const { user } = useContext(UserState);
 
-  // State to control chatbot visibility
-  const [showChatbot, setShowChatbot] = useState(false); // Initialize as hidden
+  const [showChatbot, setShowChatbot] = useState(false);
 
   const titleDom = useRef();
   const descriptionDom = useRef();
@@ -26,7 +24,7 @@ function AskQuestion() {
     const title = titleDom.current.value;
     const description = descriptionDom.current.value;
     const userid = userId;
-    const tag = "General"; // Or allow user to select/input tags
+    const tag = "General";
 
     try {
       const response = await axiosInstance.post("/question", {
@@ -64,7 +62,6 @@ function AskQuestion() {
     }
   }
 
-  // Function to toggle chatbot visibility
   const toggleChatbotVisibility = () => {
     setShowChatbot((prev) => !prev);
   };
@@ -72,7 +69,10 @@ function AskQuestion() {
   return (
     <Layout>
       <div className={classes.allContainer}>
-        <div className={classes.question__container}>
+        {/* Left Section: Question Form */}
+        <div className={classes.columnSection}>
+          {" "}
+          {/* Apply new common class */}
           <div className={classes.question__wrapper}>
             <h3 className={classes.question__header__title}>
               <span className={classes.highlight}>
@@ -106,7 +106,12 @@ function AskQuestion() {
               </div>
             </div>
           </div>
-          <h4 className={classes.highlight}>Post Your Question</h4>
+          <h4
+            className={classes.highlight}
+            style={{ marginTop: "20px", marginBottom: "10px" }}
+          >
+            Post Your Question
+          </h4>
           <div className={classes.question__header__titleTwo}>
             <form onSubmit={handleSubmit} className={classes.question__form}>
               <input
@@ -133,26 +138,26 @@ function AskQuestion() {
                     Back to Home
                   </button>
                 </Link>
-                {/* Modified button to toggle chatbot visibility */}
                 <button
                   className={classes.question__btn}
                   type="button"
-                  onClick={toggleChatbotVisibility} // Add onClick handler
+                  onClick={toggleChatbotVisibility}
                 >
-                  {showChatbot ? "Hide Chatbot" : "Ask Chatbot"}{" "}
-                  {/* Change button text dynamically */}
+                  {showChatbot ? "Hide Chatbot" : "Ask Chatbot"}
                 </button>
               </div>
             </form>
           </div>
         </div>
 
-        {/* --- AI Chatbot Integration (Conditionally Rendered) --- */}
-        {showChatbot && ( // Only render if showChatbot is true
-          <>
-            {/* <hr className={classes.sectionSeparator} />{" "} */}
-            {/* Add a separator for clarity */}
-            <div className={classes.aiChatSection}>
+        {/* Right Section: AI Chatbot Integration (Conditionally Rendered) */}
+        {showChatbot && (
+          <div className={classes.columnSection}>
+            {" "}
+            {/* Apply new common class */}
+            <div className={classes.aiChatContentWrapper}>
+              {" "}
+              {/* New wrapper for content inside the AI column */}
               <h3 className={classes.question__header__title}>
                 <span className={classes.highlight}>
                   Get AI Assistance for Your Question
@@ -164,9 +169,8 @@ function AskQuestion() {
               </p>
               <Chatbot />
             </div>
-          </>
+          </div>
         )}
-        {/* --- End AI Chatbot Integration --- */}
       </div>
     </Layout>
   );

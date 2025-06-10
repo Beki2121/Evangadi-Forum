@@ -1,23 +1,69 @@
+/* Overall container for the two-column layout */
 .allContainer {
   width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start; /* Changed from center to flex-start to align them to the top, which might look better */
-  gap: 30px; /* Add this or adjust if already present. Try a smaller value like 20px, 30px, 40px */
-  background:url("../../../assets/Images/howitworkbg.jpg");
+  max-width: 1200px; /* Adjust max-width for the overall content area */
+  margin: 20px auto; /* Center the entire layout */
+  display: flex; /* Make it a flex container */
+  justify-content: center; /* Center items horizontally if they don't fill max-width */
+  align-items: flex-start; /* Align columns to the top */
+  gap: 30px; /* Space between the two columns */
+  /* background: url("../../../assets/Images/howitworkbg.jpg"); */ /* Keep background if desired */
   background-repeat: no-repeat;
   background-size: cover;
-  padding: 20px; /* Add some padding to the container itself if items are too close to edges */
+  padding: 20px; /* Add some padding to the container itself */
+  box-sizing: border-box; /* Include padding in element's total width and height */
 }
 
+/* Common style for both the "Question" column and the "AI Chat" column */
+.columnSection {
+  flex: 1; /* This makes both columns take equal available space */
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* Space between sections within each column */
+  background-color: #f9f9f9; /* Background for the column itself */
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* Consistent shadow */
+  padding: 25px; /* Padding inside the column */
+}
+
+/* Adjustments for existing question-related containers to fit inside columnSection */
 .question__container {
-  width: 100%;
-  max-width: 800px;
-  margin: 20px auto;
-  /* padding: 10px; */
-
+  /* No need for width, max-width, margin: auto here */
+  /* flex-grow: 1; if you want it to fill vertical space */
+  padding: 0; /* Padding is now on .columnSection */
+  background-color: transparent; /* Background on columnSection */
+  border-radius: 0;
+  box-shadow: none;
 }
 
+.question__wrapper {
+  /* This div already helps group the 'How to Ask' section. */
+}
+
+/* New wrapper for AI chat content to apply padding consistently */
+.aiChatContentWrapper {
+  /* This will contain the Chatbot and its surrounding text */
+  /* Padding is already applied to .columnSection, so often no extra padding needed here */
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Space between heading, prompt, and chatbot */
+  height: 100%; /* Ensure it fills parent's height */
+}
+
+/* Chatbot container adjustments */
+.chatbotContainer {
+  /* This class is from Chatbot.module.css, but relevant for context */
+  /* Ensure this is setup to fill its parent (aiChatContentWrapper) */
+  flex-grow: 1; /* Allows chatbot to grow vertically */
+  height: 100%; /* Important for the chatbot to fill its section */
+  width: 100%; /* Ensure it takes full width of its column */
+  max-width: unset; /* Remove max-width from Chatbot.module.css */
+  margin: 0; /* Remove margin: auto from Chatbot.module.css */
+  box-shadow: none; /* Remove outer shadow from Chatbot.module.css if columnSection has one */
+  border: none; /* Remove outer border from Chatbot.module.css if columnSection has one */
+}
+
+/* Existing styles, just ensure they don't interfere with the new layout */
 .question__header__title {
   text-align: center;
   font-size: 1.8rem;
@@ -25,19 +71,12 @@
   color: #333;
 }
 
-.questionContainer {
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 10px;
-}
-
-.questionListUl{
+.questionListUl {
   padding: 0 !important;
 }
 
 .questionTitle {
   font-size: 1.6rem;
-  /* margin-bottom: 15px; */
   color: #333;
 }
 
@@ -61,7 +100,7 @@
 .icon {
   margin-right: 15px;
   font-size: 1.2rem;
-  color: var(--blue-main);
+  color: var(--blue-main); /* Ensure --blue-main is defined elsewhere */
 }
 
 .highlight {
@@ -74,44 +113,79 @@
   display: flex;
   justify-content: space-between;
   margin-top: 20px;
+  flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+  gap: 10px; /* Space between buttons */
 }
 
-.question__button, .question__btn {
-  background-color: var(--blue-shade);
+.question__button,
+.question__btn {
+  background-color: var(--blue-shade); /* Ensure --blue-shade is defined */
   color: #fff;
   border: none;
   padding: 10px 20px;
   border-radius: 5px;
   cursor: pointer;
+  transition: background-color 0.3s ease; /* Smooth transition */
 }
 
 .question__btn {
-  background-color: #ccc;
+  background-color: #6c757d; /* A neutral grey for non-primary buttons */
 }
 
-.question__button:hover, .question__btn:hover {
-  background-color: var(--blue-main);
+.question__button:hover {
+  background-color: var(--blue-main); /* Ensure --blue-main is defined */
 }
 
-.question__form input, .question__form textarea {
-  width: 100%;
+.question__btn:hover {
+  background-color: #5a6268; /* Darker grey on hover */
+}
+
+.question__form input,
+.question__form textarea {
+  width: calc(100% - 30px); /* Account for padding */
   padding: 15px;
   margin: 10px 0;
   border: 1px solid #ddd;
   border-radius: 5px;
-
+  box-sizing: border-box; /* Crucial for width calculation */
 }
-.question__description:focus{
+
+.question__description:focus {
   outline: none;
-  border: 1.5px solid var(--primary-color) !important;
-
+  border: 1.5px solid var(--primary-color) !important; /* Ensure --primary-color is defined */
 }
+
 .aiChatSection {
-  width: 100%;
-  max-width: 400px; /* Adjust this value as needed, e.g., 500px, 600px */
-  /* You might also want some padding here */
-  padding: 20px;
-  background-color: #f9f9f9; /* Or match your questionContainer background */
-  border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Optional: add a subtle shadow */
+  /* This class is conceptually replaced by .columnSection in the JSX,
+     but if you want specific styles for the AI section's inner content,
+     you'd target .aiChatContentWrapper's children. */
+  padding: 0; /* Padding handled by .columnSection */
+  background-color: transparent; /* Background handled by .columnSection */
+  box-shadow: none; /* Shadow handled by .columnSection */
+}
+
+.aiChatPrompt {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 15px; /* Space below prompt */
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 992px) {
+  .allContainer {
+    flex-direction: column; /* Stack columns vertically on smaller screens */
+    align-items: center; /* Center items when stacked */
+    padding: 15px;
+  }
+
+  .columnSection {
+    width: 100%; /* Full width when stacked */
+    max-width: 600px; /* Constrain max width even when stacked */
+    margin-bottom: 20px; /* Space between stacked columns */
+  }
+
+  .buttonContainer {
+    flex-direction: column; /* Stack buttons vertically */
+    align-items: stretch; /* Stretch buttons to fill width */
+  }
 }
