@@ -99,10 +99,7 @@ function Signup({ onSwitch }) {
           // Check the response status after awaiting the promise
           if (loginResponse.status === 200) {
             // Store the JWT token (use localStorage, sessionStorage, or cookies as appropriate)
-            localStorage.setItem(
-              "EV-Forum-token-G3-APR2024",
-              loginResponse.data.token
-            ); // Store the token in local storage
+            localStorage.setItem("token", loginResponse.data.token); // Store the token in local storage
 
             // Redirect to home page
             window.location.href = "/";

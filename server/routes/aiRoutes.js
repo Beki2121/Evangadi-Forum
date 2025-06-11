@@ -1,5 +1,3 @@
-// routes/aiRoutes.js
-
 const express = require("express");
 const router = express.Router();
 // Import all three functions
@@ -12,6 +10,5 @@ const {
 router.post("/chat", chatWithAI);
 router.get("/history", getChatHistory);
 
-router.get("/sessions", getAllChatSessions); // Add this new route
-
+router.get("/sessions", getAllChatSessions);
 module.exports = router;

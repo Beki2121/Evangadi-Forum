@@ -9,20 +9,27 @@ import Home from "../Pages/Home/Home.jsx";
 import AuthLayout from "../Pages/AuthLayout/AuthLayout.jsx";
 import HowItWorks from "../Pages/HowItWorks/HowItWorks.jsx";
 import Chatbot from "../components/Chatbot/Chatbot.jsx";
+import PrivateRoute from "./PrivateRoute.jsx"; // Import your PrivateRoute component
 
 function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/ask" element={<AskQuestion />} />
-      <Route path="/question/:questionId" element={<QuestionAndAnswer />} />
+      {/* Public Routes (accessible without login) */}
+      <Route path="/auth" element={<AuthLayout />} />
+      <Route path="/forgetPass" element={<ForgotPassword />} />
       <Route path="/howitworks" element={<HowItWorks />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
-      <Route path="/auth" element={<AuthLayout />} />
-      <Route path="/forgetPass" element={<ForgotPassword />} />
-      <Route path="/chatbot" element={<Chatbot />} />
-      <Route path="*" element={<PageNotFound />} />
+      <Route path="*" element={<PageNotFound />} /> {/* Keep 404 last */}
+      {/* Protected Routes (require login) */}
+      {/* Wrap all routes that need authentication inside a PrivateRoute */}
+      <Route element={<PrivateRoute />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/ask" element={<AskQuestion />} />
+        <Route path="/question/:questionId" element={<QuestionAndAnswer />} />
+        <Route path="/chatbot" element={<Chatbot />} />
+        {/* Add any other routes that should only be accessible when logged in here */}
+      </Route>
     </Routes>
   );
 }

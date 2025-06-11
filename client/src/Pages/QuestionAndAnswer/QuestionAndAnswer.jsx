@@ -10,6 +10,8 @@ import moment from "moment";
 import { UserState } from "../../App.jsx";
 import { LuCalendarClock } from "react-icons/lu";
 import Swal from "sweetalert2";
+// Import a new icon for the solution marker
+import { FaCheckCircle } from "react-icons/fa";
 
 function QuestionAndAnswer() {
   const [questionDetails, setQuestionDetails] = useState({});
@@ -25,6 +27,7 @@ function QuestionAndAnswer() {
     try {
       // Assuming this endpoint returns question details AND its answers,
       // and each answer object now includes a 'rating_count' property.
+      // Also, assuming questionDetails will now have a 'solution_answer_id' if one is marked.
       const res = await axiosInstance.get(`/question/${questionId}`);
       setQuestionDetails(res.data);
       setLoading(false);
@@ -59,7 +62,7 @@ function QuestionAndAnswer() {
       return;
     }
 
-    const token = localStorage.getItem("EV-Forum-token-G3-APR2024");
+    const token = localStorage.getItem("token");
     if (!token) {
       Swal.fire({
         title: "Authentication Required",
@@ -119,7 +122,7 @@ function QuestionAndAnswer() {
 
   // RE-ENABLED FUNCTION: handleRating for answers
   async function handleRating(answerId, ratingType) {
-    const token = localStorage.getItem("EV-Forum-token-G3-APR2024");
+    const token = localStorage.getItem("token");
     if (!token) {
       Swal.fire({
         title: "Authentication Required",
@@ -170,6 +173,76 @@ function QuestionAndAnswer() {
     }
   }
 
+  // NEW FUNCTION: handleMarkAsSolution
+  async function handleMarkAsSolution(answerId) {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      Swal.fire({
+        title: "Authentication Required",
+        text: "You must be logged in to mark an answer as a solution.",
+        icon: "warning",
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+
+    // Confirm with the user before marking as solution
+    const result = await Swal.fire({
+      title: "Mark as Solution?",
+      text: "Are you sure you want to mark this answer as the solution? This cannot be undone.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, mark it!",
+      cancelButtonText: "No, cancel",
+    });
+
+    if (!result.isConfirmed) {
+      return; // User cancelled the operation
+    }
+
+    try {
+      // Send the request to mark the answer as a solution
+      // The backend should verify that the user making the request is the question owner.
+      const response = await axiosInstance.patch(
+        `/question/${questionId}/mark-solution`, // Adjust this endpoint as per your backend
+        { solutionAnswerId: answerId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        Swal.fire({
+          title: "Success!",
+          text: "Answer marked as solution successfully!",
+          icon: "success",
+          confirmButtonText: "OK",
+        }).then(() => {
+          fetchQuestionAndAnswers(); // Re-fetch to update UI with solution marker
+        });
+      } else {
+        Swal.fire({
+          title: "Error",
+          text: response.data.msg || "Failed to mark answer as solution.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+    } catch (error) {
+      console.error("Error marking answer as solution:", error);
+      Swal.fire({
+        title: "Error",
+        text:
+          error.response?.data?.msg ||
+          "Failed to mark answer as solution. Please try again later.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+    }
+  }
+
   // Function to truncate text after 50 words and add a "See More" link
   const truncateText = (text, limit = 50) => {
     if (!text) return "";
@@ -211,6 +284,24 @@ function QuestionAndAnswer() {
     );
   }
 
+  // Check if the current user is the owner of the question
+  const isQuestionOwner = userId === questionDetails?.qtn_userid;
+  const solutionAnswerId = questionDetails?.solution_answer_id; // Assuming backend returns this
+  // In QuestionAndAnswer.jsx, before the 'return' statement
+  console.log("Logged in User ID:", userId);
+  console.log("Question Owner ID from backend:", questionDetails?.qtn_userid);
+  console.log(
+    "Solution Answer ID from backend:",
+    questionDetails?.solution_answer_id
+  );
+  console.log(
+    "Is current user the question owner?",
+    userId === questionDetails?.qtn_userid
+  );
+  console.log(
+    "Is a solution already marked?",
+    !!questionDetails?.solution_answer_id
+  ); // !! converts to boolean
   return (
     <Layout>
       <div className={styles.container}>
@@ -304,6 +395,38 @@ function QuestionAndAnswer() {
                     >
                       <FaThumbsDown size={20} />
                     </button>
+
+                    {/* Mark as Solution Button / Solution Indicator */}
+                    {isQuestionOwner && !solutionAnswerId && (
+                      <button
+                        className={styles.markSolutionButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkAsSolution(answer?.answerid);
+                        }}
+                        title="Mark this as the solution"
+                      >
+                        Mark as Solution
+                      </button>
+                    )}
+
+                    {solutionAnswerId === answer?.answerid && (
+                      <div
+                        className={styles.solutionIndicator}
+                        title="Marked as Solution"
+                      >
+                        <FaCheckCircle size={50} color="green" />
+                        <span
+                          style={{
+                            marginLeft: "5px",
+                            color: "green",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          Solution
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

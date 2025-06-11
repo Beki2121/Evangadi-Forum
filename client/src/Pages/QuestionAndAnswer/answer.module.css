@@ -1,3 +1,33 @@
+/* Add these to your answer.module.css */
+
+.markSolutionButton {
+  background-color: var(--blue-shade); /* Or any color you prefer */
+  color: rgb(0, 0, 0);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  background-color: #0c4df163;
+  transition: background-color 0.3s ease;
+  margin-left: 15px; /* Add some space from rating buttons */
+}
+
+.markSolutionButton:hover {
+  background-color: var(--blue-main); /* Darker shade on hover */
+}
+
+.solutionIndicator {
+  display: flex;
+  align-items: center;
+  margin-left: 15px; /* Adjust spacing as needed */
+  padding: 5px 10px;
+  border-radius: 5px;
+  background-color: rgba(0, 128, 0, 0.1); /* Light green background */
+}
+
+/* Existing styles... */
+
 /* Container Styles */
 .container {
   width: 100%;

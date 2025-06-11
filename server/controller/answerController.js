@@ -11,7 +11,7 @@ async function getAnswer(req, res) {
     a.userid AS answer_userid,
     a.answer,
     a.created_at AS createdAt,
-    a.rating_count, -- <--- This is included!
+    a.rating_count,
     u.username
 FROM
     answers a

@@ -45,14 +45,14 @@ async function postQuestion(req, res) {
 async function getAllQuestions(req, res) {
   try {
     const [questions] = await dbConnection.query(`SELECT
-            q.questionid,
-            q.title,
-            q.description,
-            q.createdAt,
-            u.username
-        FROM questions q
-        INNER JOIN users u ON q.userid = u.userid
-        ORDER BY q.createdAt DESC`); // Removed extra spaces/invisible characters
+        q.questionid,
+        q.title,
+        q.description,
+        q.createdAt,
+        u.username
+      FROM questions q
+      INNER JOIN users u ON q.userid = u.userid
+      ORDER BY q.createdAt DESC`); // Removed extra spaces/invisible characters
     return res.status(StatusCodes.OK).json({
       message: questions,
     });
@@ -64,7 +64,7 @@ async function getAllQuestions(req, res) {
   }
 }
 
-// get single question and answers (already corrected in previous response)
+// get single question and answers (updated to fetch q.userid and solution_answer_id)
 async function getQuestionAndAnswer(req, res) {
   const questionid = req.params.questionId;
 
@@ -72,13 +72,15 @@ async function getQuestionAndAnswer(req, res) {
     const [questionRows] = await dbConnection.query(
       `SELECT
           q.questionid,
+          q.userid AS qtn_userid, -- Fetch the question owner's ID
           q.title,
           q.description,
           q.createdAt AS qtn_createdAt,
-          u.username AS qtn_username
-       FROM questions q
-       INNER JOIN users u ON q.userid = u.userid
-       WHERE q.questionid = ?`,
+          u.username AS qtn_username,
+          q.solution_answer_id -- Fetch the solution answer ID
+        FROM questions q
+        INNER JOIN users u ON q.userid = u.userid
+        WHERE q.questionid = ?`,
       [questionid]
     );
 
@@ -98,10 +100,10 @@ async function getQuestionAndAnswer(req, res) {
           a.createdAt,
           a.rating_count,
           u.username AS answer_username
-       FROM answers a
-       INNER JOIN users u ON a.userid = u.userid
-       WHERE a.questionid = ?
-       ORDER BY a.createdAt DESC`,
+        FROM answers a
+        INNER JOIN users u ON a.userid = u.userid
+        WHERE a.questionid = ?
+        ORDER BY a.createdAt DESC`,
       [questionid]
     );
 
@@ -123,4 +125,71 @@ async function getQuestionAndAnswer(req, res) {
   }
 }
 
-module.exports = { postQuestion, getAllQuestions, getQuestionAndAnswer };
+// NEW FUNCTION: Mark an answer as a solution
+async function markAnswerAsSolution(req, res) {
+  const { questionId } = req.params;
+  const { solutionAnswerId } = req.body;
+  const loggedInUserId = req.user.userid; // User ID from authMiddleware
+
+  if (!solutionAnswerId) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ msg: "Solution answer ID is required." });
+  }
+
+  try {
+    // 1. Verify if the logged-in user is the owner of the question
+    const [questionRows] = await dbConnection.query(
+      `SELECT userid FROM questions WHERE questionid = ?`,
+      [questionId]
+    );
+
+    if (questionRows.length === 0) {
+      return res
+        .status(StatusCodes.NOT_FOUND)
+        .json({ msg: "Question not found." });
+    }
+
+    const questionOwnerId = questionRows[0].userid;
+
+    if (questionOwnerId !== loggedInUserId) {
+      return res.status(StatusCodes.FORBIDDEN).json({
+        msg: "You are not authorized to mark a solution for this question.",
+      });
+    }
+
+    // 2. Verify if the solutionAnswerId belongs to an answer for this question
+    const [answerRows] = await dbConnection.query(
+      `SELECT answerid FROM answers WHERE questionid = ? AND answerid = ?`,
+      [questionId, solutionAnswerId]
+    );
+
+    if (answerRows.length === 0) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        msg: "The provided answer ID is not valid for this question.",
+      });
+    }
+
+    // 3. Update the questions table to mark the solution
+    await dbConnection.query(
+      `UPDATE questions SET solution_answer_id = ? WHERE questionid = ?`,
+      [solutionAnswerId, questionId]
+    );
+
+    res
+      .status(StatusCodes.OK)
+      .json({ msg: "Answer marked as solution successfully." });
+  } catch (error) {
+    console.error("Error marking answer as solution:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      msg: "Failed to mark answer as solution. Please try again later.",
+    });
+  }
+}
+
+module.exports = {
+  postQuestion,
+  getAllQuestions,
+  getQuestionAndAnswer,
+  markAnswerAsSolution,
+};
