@@ -6,14 +6,14 @@ const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const authMiddleware = require("../middleware/authMiddleware.js");
+// const authMiddleware = require("../middleware/authMiddleware.js");
 // Middleware to check if the user is authenticated
 
 async function register(req, res) {
   const { username, firstname, lastname, email, password } = req.body;
 
   const currentTimestamp = new Date();
-  currentTimestamp.setHours(currentTimestamp.getHours() + 3); // Adjusting for UTC+3
+  currentTimestamp.setHours(currentTimestamp.getHours() + 3);
   const formattedTimestamp = currentTimestamp
     .toISOString()
     .slice(0, 19)

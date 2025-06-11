@@ -26,14 +26,6 @@ if (!API_KEY) {
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-/**
- * Helper function to save a message to the database.
- * Ensures `userId` is explicitly `null` if `undefined`.
- * @param {string} sessionId - The ID of the chat session.
- * @param {number | undefined | null} userId - The ID of the user, can be undefined or null.
- * @param {'user' | 'model'} role - The role of the sender ('user' or 'model').
- * @param {string} content - The message content.
- */
 async function saveMessageToDb(sessionId, userId, role, content) {
   try {
     // Ensure userId is explicitly null if it's undefined from the request body
@@ -49,12 +41,6 @@ async function saveMessageToDb(sessionId, userId, role, content) {
   }
 }
 
-/**
- * Helper function to load conversation history for a given session from the database.
- * Formats the history for the Google Generative AI SDK.
- * @param {string} sessionId - The ID of the chat session.
- * @returns {Array<Object>} An array of formatted chat messages.
- */
 async function loadHistoryFromDb(sessionId) {
   try {
     const [rows] = await dbConnection.execute(
@@ -72,12 +58,6 @@ async function loadHistoryFromDb(sessionId) {
   }
 }
 
-/**
- * Handles incoming chat messages, interacts with the Gemini AI,
- * and saves conversation turns to the database.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
- */
 async function chatWithAI(req, res) {
   const { message, sessionId, userId } = req.body; // `userId` might be undefined
 
@@ -137,11 +117,6 @@ async function chatWithAI(req, res) {
   }
 }
 
-/**
- * Fetches the entire chat history for a specific session ID.
- * @param {Object} req - The Express request object (expects `sessionId` in `req.query`).
- * @param {Object} res - The Express response object.
- */
 async function getChatHistory(req, res) {
   const { sessionId } = req.query; // Assuming sessionId comes as a query parameter
 
@@ -171,12 +146,6 @@ async function getChatHistory(req, res) {
   }
 }
 
-/**
- * Fetches a list of all unique chat sessions from the database.
- * This can be filtered by user ID if implemented.
- * @param {Object} req - The Express request object (can expect `userId` in `req.query`).
- * @param {Object} res - The Express response object.
- */
 async function getAllChatSessions(req, res) {
   // If you have authenticated users, you'd typically get userId from req.user.id (from middleware)
   // For now, it lists all unique sessions.

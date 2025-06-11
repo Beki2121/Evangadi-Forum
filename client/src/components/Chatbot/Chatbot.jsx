@@ -12,7 +12,7 @@ import {
   FiSend,
   FiMessageSquare,
   FiClock,
-} from "react-icons/fi"; // Feather icons
+} from "react-icons/fi";
 
 const Chatbot = () => {
   const [messages, setMessages] = useState([]);
