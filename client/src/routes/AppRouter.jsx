@@ -22,6 +22,7 @@ function AppRouter() {
       <Route path="/terms" element={<Terms />} />
       <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
       <Route path="*" element={<PageNotFound />} /> {/* Keep 404 last */}
+      <Route path="/public-chat" element={<PublicChatPage />} />
       {/* Protected Routes (require login) */}
       {/* Wrap all routes that need authentication inside a PrivateRoute */}
       <Route element={<PrivateRoute />}>
@@ -29,7 +30,6 @@ function AppRouter() {
         <Route path="/ask" element={<AskQuestion />} />
         <Route path="/question/:questionId" element={<QuestionAndAnswer />} />
         <Route path="/chatbot" element={<Chatbot />} />
-        <Route path="/public-chat" element={<PublicChatPage />} />
         <Route path="/profile/:userid" element={<UserProfile />} />
         {/* Add any other routes that should only be accessible when logged in here */}
       </Route>

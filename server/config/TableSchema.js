@@ -82,23 +82,23 @@ async function initializeDatabase() {
     // Create chat_messages table
     await dbConnection.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
-        message_id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NULL,
-        username VARCHAR(255) NOT NULL,
-        message_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-        room_id VARCHAR(255) NOT NULL,
-        message_type ENUM('public', 'private', 'file') NOT NULL DEFAULT 'public',
-        recipient_id INT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        edited_at DATETIME NULL,
-        is_deleted BOOLEAN DEFAULT FALSE NOT NULL,
-        reactions JSON,
-        file_data LONGTEXT NULL, -- Changed from LONGBLOB to LONGTEXT to align with your provided schema
-        file_name VARCHAR(255) NULL,
-        file_type VARCHAR(50) NULL,
-        FOREIGN KEY (user_id) REFERENCES users(userid) ON DELETE SET NULL,
-        FOREIGN KEY (recipient_id) REFERENCES users(userid) ON DELETE SET NULL
-      ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  message_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NULL,
+  username VARCHAR(255) NOT NULL,
+  message_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  room_id VARCHAR(255) NOT NULL,
+  message_type ENUM('public', 'private') NOT NULL DEFAULT 'public', -- MODIFIED: Removed 'file'
+  recipient_id INT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  edited_at DATETIME NULL,
+  is_deleted BOOLEAN DEFAULT FALSE NOT NULL,
+  reactions JSON,
+  file_data LONGTEXT NULL,
+  file_name VARCHAR(255) NULL,
+  file_type VARCHAR(50) NULL,
+  FOREIGN KEY (user_id) REFERENCES users(userid) ON DELETE SET NULL,
+  FOREIGN KEY (recipient_id) REFERENCES users(userid) ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     `);
     console.log("Public Chat Messages table ensured.");
 

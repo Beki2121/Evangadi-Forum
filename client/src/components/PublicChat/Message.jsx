@@ -50,16 +50,9 @@ const Message = ({
   // Check if the message is marked as deleted
   const isDeleted = message.is_deleted;
 
-  // Format timestamp for display - MODIFIED TO HANDLE INVALID DATES
+  // Format timestamp for display
   const formatTimestamp = (timestamp) => {
-    if (!timestamp) {
-      return "N/A"; // Return "N/A" if timestamp is null/undefined
-    }
     const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
-      // Check if the date is "Invalid Date"
-      return "Invalid Date"; // Return a specific string if the date is invalid
-    }
     // Use Intl.DateTimeFormat for better localization and options
     return new Intl.DateTimeFormat(undefined, {
       year: "numeric",
@@ -121,10 +114,11 @@ const Message = ({
   // Close reaction menus if clicked outside
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Check if the click is outside the message bubble and the emoji picker itself
       if (
         messageBubbleRef.current &&
         !messageBubbleRef.current.contains(event.target) &&
-        !event.target.closest(".EmojiPickerReact")
+        !event.target.closest(".EmojiPickerReact") // Check for the emoji picker's class name
       ) {
         setShowReactionMenu(false);
         setShowFullEmojiPicker(false);
@@ -173,7 +167,7 @@ const Message = ({
           className={styles.messageAvatar}
           onError={(e) => {
             e.target.onerror = null;
-            e.target.src = "https://placehold.co/44x44/ff6600/white?text=?";
+            e.target.src = "https://placehold.co/44x44/ff6600/white?text=?"; // Adjusted placeholder size
           }}
         />
       ) : (
@@ -184,9 +178,10 @@ const Message = ({
 
       <div
         className={`${styles.messageBubble} group ${
+          // Added group for hover effects in CSS
           isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble
         } ${isDeleted ? styles.deletedMessage : ""}`}
-        ref={messageBubbleRef}
+        ref={messageBubbleRef} // Attach ref to the message bubble
       >
         <span className={styles.messageUsername}>
           {message.username || "Anonymous"}
@@ -244,9 +239,7 @@ const Message = ({
         <time className={styles.messageTimestamp} dateTime={message.created_at}>
           {formatTimestamp(message.created_at)}
           {message.edited_at && (
-            <span className={styles.editedTag}>
-              ({formatTimestamp(message.edited_at)} edited)
-            </span> // Also format edited_at
+            <span className={styles.editedTag}>(edited)</span>
           )}
         </time>
 
@@ -310,6 +303,7 @@ const Message = ({
 
         {/* Full Emoji Picker */}
         {showFullEmojiPicker && !isDeleted && (
+          // Use a fixed position for the full picker with an overlay
           <div
             className={styles.reactionEmojiPickerOverlay}
             onClick={() => setShowFullEmojiPicker(false)}

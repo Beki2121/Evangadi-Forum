@@ -5,7 +5,6 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const db = require("./config/dbConfig");
 const initializeDatabase = require("./config/TableSchema");
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
@@ -18,101 +17,177 @@ const io = new Server(server, {
   },
 });
 
-app.use(cors({ origin: "http://localhost:5173" })); // Your frontend URL
+app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 
-// Initialize database tables on server start
-initializeDatabase();
+(async () => {
+  try {
+    await initializeDatabase();
+    console.log("Database initialized successfully on app startup.");
+  } catch (err) {
+    console.error("Failed to initialize database on startup:", err);
+    process.exit(1);
+  }
+})();
 
 // ==============================================
 // In-memory store for currently active users (based on connection AND activity)
-// This will replace the simple 'onlineUsers' for presence tracking.
 const activeUsers = {}; // { userId: { userId, username, avatar_url, sid, lastActivity, currentRoomId } }
 const ACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
-let lastKnownActiveUsersCount = 0; // To prevent unnecessary broadcasts
+let lastKnownActiveUsersCount = 0;
 
 // Define the public chat room ID
 const PUBLIC_CHAT_ROOM_ID = "stackoverflow_lobby";
 // ==============================================
 
-// JWT Secret from environment variables
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretjwtkey";
 
-// Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
+  console.log(
+    "App.js authenticateToken: Received Authorization Header:",
+    authHeader
+  );
+  console.log(
+    "App.js authenticateToken: Extracted Token:",
+    token ? "Exists" : "Null/Undefined"
+  );
+  console.log("App.js authenticateToken: Using JWT_SECRET:", JWT_SECRET);
+
   if (!token) {
-    return res.sendStatus(401); // No token provided
+    console.error("App.js authenticateToken: No token provided. Sending 401.");
+    return res
+      .status(401)
+      .json({ msg: "No token provided, authorization denied." });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      return res.sendStatus(403); // Token is invalid or expired
+      console.error(
+        "App.js authenticateToken: Token verification failed:",
+        err.message
+      );
+      if (err.name === "TokenExpiredError") {
+        return res.status(403).json({ msg: "Token expired." });
+      }
+      return res.status(403).json({ msg: "Invalid token." });
     }
-    req.user = user; // Attach user payload to request
+    req.user = user;
+    console.log(
+      "App.js authenticateToken: Token successfully verified. Decoded user:",
+      req.user
+    );
     next();
   });
 };
 
-// ==============================================
-// Authentication Routes - Handled by userRoutes
-// ==============================================
-
-// User authentication routes
 const userRoutes = require("./routes/userRoutes");
-// IMPORTANT: This mounts userRoutes at /api/v1/user.
-// So, if userRoutes.js has router.post('/login', ...), the full path will be /api/v1/user/login
 app.use("/api/v1/user", userRoutes);
 
-// Check User (Protected Route Example)
-app.get("/api/check-user", authenticateToken, (req, res) => {
-  res.status(200).json({
-    message: "Token is valid",
-    user: {
-      userid: req.user.userid,
-      username: req.user.username,
-      email: req.user.email,
-    },
-  });
+app.get("/api/check-user", authenticateToken, async (req, res) => {
+  try {
+    const [users] = await db.query(
+      "SELECT userid, username, email, avatar_url FROM users WHERE userid = ?",
+      [req.user.userid]
+    );
+
+    if (users.length === 0) {
+      console.error(
+        `User with ID ${req.user.userid} not found in DB after token verification.`
+      );
+      return res.status(404).json({ msg: "User not found in database." });
+    }
+
+    const authenticatedUserData = users[0];
+
+    res.status(200).json({
+      message: "Token is valid",
+      user: {
+        userid: authenticatedUserData.userid,
+        username: authenticatedUserData.username,
+        email: authenticatedUserData.email,
+        avatar_url: authenticatedUserData.avatar_url,
+      },
+    });
+    console.log("/api/check-user: Sent back authenticated user data.");
+  } catch (error) {
+    console.error("Error fetching user data in /api/check-user:", error);
+    res.status(500).json({ msg: "Internal server error while checking user." });
+  }
 });
 
-// ==============================================
-// Other API Endpoints
-// ==============================================
-
-// AI-related routes
 const aiRoutes = require("./routes/aiRoutes");
 app.use("/api/ai", aiRoutes);
-// Questions-related routes
 const questionRoutes = require("./routes/questionRoute");
 app.use("/api/v1", questionRoutes);
-// Answers-related routes
 const answerRoutes = require("./routes/answerRoute");
 app.use("/api/v1", answerRoutes);
+
+// Helper function to generate a consistent private chat room ID
+// Ensures that DM between User A and User B always has the same room ID (e.g., "1-2" not "2-1")
+function getPrivateChatRoomId(user1Id, user2Id) {
+  const sortedIds = [user1Id, user2Id].sort();
+  return `${sortedIds[0]}-${sortedIds[1]}`;
+}
 
 // Endpoint to fetch chat history for a room (optional, primarily for initial load)
 app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
   const { roomId } = req.params;
+  const { type, targetUserId } = req.query; // Add query params for message type and target user
+  const userId = req.user.userid; // Current authenticated user
+
   try {
-    const [messages] = await db.query(
-      `SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
-             FROM chat_messages
-             WHERE room_id = ? AND message_type = 'public' -- Fetch public messages for this room
-             ORDER BY created_at ASC`,
-      [roomId]
-    );
-    const formattedMessages = messages.map((msg) => ({
-      ...msg,
-      reactions: msg.reactions || [],
-      file_data: msg.file_data || null,
-      file_name: msg.file_name || null,
-      file_type: msg.file_type || null,
-    }));
+    let query;
+    let params;
+
+    if (type === "private" && targetUserId) {
+      const dmRoomId = getPrivateChatRoomId(userId, targetUserId);
+      query = `
+        SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        FROM chat_messages
+        WHERE room_id = ? AND message_type = 'private'
+        ORDER BY created_at ASC LIMIT 200;
+      `;
+      params = [dmRoomId];
+    } else {
+      // Default to public if type is not private or targetUserId is missing
+      query = `
+        SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        FROM chat_messages
+        WHERE room_id = ? AND message_type = 'public'
+        ORDER BY created_at ASC LIMIT 200;`;
+      params = [roomId];
+    }
+
+    const [messages] = await db.query(query, params);
+    const formattedMessages = messages.map((msg) => {
+      let parsedReactions = [];
+      if (msg.reactions) {
+        try {
+          parsedReactions = JSON.parse(msg.reactions);
+        } catch (e) {
+          console.error(
+            `Error parsing reactions for message ID ${msg.message_id}:`,
+            e.message,
+            `Raw reactions: ${msg.reactions}`
+          );
+          // Fallback to empty array if parsing fails
+          parsedReactions = [];
+        }
+      }
+      return {
+        ...msg,
+        reactions: parsedReactions,
+        file_data: msg.file_data || null,
+        file_name: msg.file_name || null,
+        file_type: msg.file_type || null,
+      };
+    });
     res.status(200).json(formattedMessages);
   } catch (error) {
-    console.error("Error fetching chat history:", error);
+    console.error("Error fetching chat history via HTTP:", error);
     res.status(500).json({ message: "Server error fetching chat history" });
   }
 });
@@ -128,7 +203,7 @@ io.on("connection", (socket) => {
   socket.on("join_room", (roomId) => {
     socket.join(roomId);
     console.log(`Socket ${socket.id} joined room: ${roomId}`);
-    // Update user's current room tracking in activeUsers
+    // Update user's current room tracking in activeUsers if available
     for (const userId in activeUsers) {
       if (activeUsers[userId].sid === socket.id) {
         activeUsers[userId].currentRoomId = roomId;
@@ -138,7 +213,7 @@ io.on("connection", (socket) => {
         break;
       }
     }
-    // Broadcast updated online users as their room status might change, though not explicitly displayed in public chat
+    // Broadcast updated online users as their room status might change (though not explicitly displayed in public chat)
     io.emit(
       "online_users",
       Object.values(activeUsers).map((u) => ({
@@ -151,60 +226,69 @@ io.on("connection", (socket) => {
 
   // Emitted by frontend to fetch chat history (both public and private)
   socket.on("fetch_chat_history", async (data) => {
-    const { roomId, userId } = data; // userId is needed for private chats
+    const { userId, targetUserId } = data; // userId is the current logged-in user's ID
+    let query;
+    let params;
+
+    if (targetUserId) {
+      // It's a private chat
+      const dmRoomId = getPrivateChatRoomId(userId, targetUserId);
+      query = `
+        SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        FROM chat_messages
+        WHERE room_id = ? AND message_type = 'private'
+        ORDER BY created_at ASC LIMIT 200;
+      `;
+      params = [dmRoomId];
+      console.log(`Fetching private chat history for room: ${dmRoomId}`);
+    } else {
+      // It's a public chat
+      const roomId = PUBLIC_CHAT_ROOM_ID; // Ensure public room ID is used
+      query = `
+        SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        FROM chat_messages
+        WHERE room_id = ? AND message_type = 'public'
+        ORDER BY created_at ASC LIMIT 200;
+      `;
+      params = [roomId];
+      console.log(`Fetching public chat history for room: ${roomId}`);
+    }
+
     try {
-      let query = `
-                SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
-                FROM chat_messages
-                WHERE (room_id = ? AND message_type = 'public')`;
-      let params = [roomId];
-
-      if (userId) {
-        // If fetching for a specific user (for DMs)
-        // Assuming userId is the current logged-in user
-        query += ` OR (message_type = 'private' AND (
-                                (user_id = ? AND recipient_id = ?) OR
-                                (user_id = ? AND recipient_id = ?)
-                            ))`;
-        // Add parameters for the private chat condition
-        // This means fetching messages where:
-        // (current_user_id sent to other_user_id) OR (other_user_id sent to current_user_id)
-        // For simplicity, I'm assuming 'roomId' for public chat or 'userId' for a specific user's DMs
-        // You would need to pass the *other* user's ID for specific DM history.
-        // For now, this fetches all private messages involving the requesting user.
-        // A better approach for DMs would be to pass `currentUserId` and `targetUserId`.
-        // Let's refine this to specifically fetch messages for a given DM pair:
-        query = `
-                    SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
-                    FROM chat_messages
-                    WHERE (room_id = ? AND message_type = 'public')`;
-        params = [roomId];
-        if (data.targetUserId) {
-          // If a specific DM target is provided
-          query += ` OR (message_type = 'private' AND (
-                                        (user_id = ? AND recipient_id = ?) OR
-                                        (user_id = ? AND recipient_id = ?)
-                                    ))`;
-          params.push(userId, data.targetUserId, data.targetUserId, userId);
-        } else {
-          // Fetch only public messages if no target user for DM
-          // No change needed as the initial query already handles public
-        }
-      }
-      query += ` ORDER BY created_at ASC LIMIT 200;`; // Limit history fetched
-
       const [messages] = await db.query(query, params);
 
-      const formattedMessages = messages.map((msg) => ({
-        ...msg,
-        reactions: msg.reactions || [],
-        file_data: msg.file_data || null,
-        file_name: msg.file_name || null,
-        file_type: msg.file_type || null,
-      }));
+      const formattedMessages = messages.map((msg) => {
+        let parsedReactions = [];
+        if (msg.reactions) {
+          try {
+            parsedReactions = JSON.parse(msg.reactions);
+          } catch (e) {
+            console.error(
+              `Error parsing reactions for message ID ${msg.message_id}:`,
+              e.message,
+              `Raw reactions: ${msg.reactions}`
+            );
+            // Fallback to empty array if parsing fails
+            parsedReactions = [];
+          }
+        }
+        return {
+          ...msg,
+          reactions: parsedReactions,
+          file_data: msg.file_data || null,
+          file_name: msg.file_name || null,
+          file_type: msg.file_type || null,
+        };
+      });
       socket.emit("chat_history", formattedMessages);
+      console.log(
+        `Socket ${socket.id}: Sent chat history for User ${userId} (Target: ${
+          targetUserId || "public"
+        })`
+      );
     } catch (error) {
-      console.error("Error fetching chat history via socket:", error);
+      console.error(`Socket ${socket.id}: Error fetching chat history:`, error);
+      socket.emit("error", "Failed to fetch chat history via socket.");
     }
   });
 
@@ -213,7 +297,7 @@ io.on("connection", (socket) => {
   // ==========================================================
 
   // Registers a user as online and updates their activity timestamp
-  socket.on("user_online", (data) => {
+  socket.on("user_online", async (data) => {
     const userId = data.userId;
     if (userId) {
       activeUsers[userId] = {
@@ -225,7 +309,7 @@ io.on("connection", (socket) => {
         currentRoomId: PUBLIC_CHAT_ROOM_ID, // Assume public lobby on initial connect
       };
       console.log(
-        `User ${activeUsers[userId].username} (ID: ${userId}) marked online/active.`
+        `User ${activeUsers[userId].username} (ID: ${userId}) marked online/active. SID: ${socket.id}`
       );
       // Broadcast the updated list of active users to all clients immediately
       io.emit(
@@ -236,13 +320,16 @@ io.on("connection", (socket) => {
           avatar_url: u.avatar_url,
         }))
       );
+    } else {
+      console.warn(
+        `Socket ${socket.id}: user_online event received with missing userId.`
+      );
     }
   });
 
   // Handles incoming chat messages (public, private, or file)
   socket.on("chat message", async (msg) => {
     const {
-      roomId,
       text,
       userId,
       username,
@@ -253,19 +340,27 @@ io.on("connection", (socket) => {
       file_name,
       file_type,
     } = msg;
+
+    let actualRoomId;
+    if (message_type === "private" && recipient_id) {
+      actualRoomId = getPrivateChatRoomId(userId, recipient_id);
+    } else {
+      actualRoomId = PUBLIC_CHAT_ROOM_ID; // Default to public room
+    }
+
     const reactionsJson = JSON.stringify([]); // New messages start with empty reactions
 
     try {
       const now = new Date();
       const insertQuery = `
-                INSERT INTO chat_messages (user_id, username, message_text, room_id, message_type, recipient_id, created_at, reactions, file_data, file_name, file_type)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            `;
+          INSERT INTO chat_messages (user_id, username, message_text, room_id, message_type, recipient_id, created_at, reactions, file_data, file_name, file_type)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        `;
       const [result] = await db.query(insertQuery, [
         userId,
         username,
         text,
-        roomId,
+        actualRoomId, // Use the derived actualRoomId
         message_type || "public",
         recipient_id || null,
         now,
@@ -280,10 +375,10 @@ io.on("connection", (socket) => {
         user_id: userId,
         username: username,
         message_text: text,
-        room_id: roomId,
+        room_id: actualRoomId, // Use the derived actualRoomId
         message_type: message_type || "public",
         recipient_id: recipient_id || null,
-        created_at: now.toISOString(), // Use ISO string for consistency
+        created_at: now.toISOString(),
         edited_at: null,
         is_deleted: false,
         reactions: [],
@@ -295,41 +390,33 @@ io.on("connection", (socket) => {
       // Update lastActivity for the user who sent the message
       if (activeUsers[userId]) {
         activeUsers[userId].lastActivity = Date.now();
-        console.log(
-          `User ${username} (ID: ${userId}) activity updated after sending message.`
-        );
       } else {
-        // If user somehow wasn't in activeUsers, add them
         activeUsers[userId] = {
           userId: userId,
           username: username || "Anonymous",
           avatar_url: avatar_url,
           sid: socket.id,
           lastActivity: Date.now(),
-          currentRoomId: roomId, // Set their current room
+          currentRoomId: actualRoomId, // Set their current room
         };
-        console.log(
-          `User ${username} (ID: ${userId}) added to active users via message.`
-        );
       }
+      console.log(
+        `User ${username} (ID: ${userId}) activity updated after sending message.`
+      );
 
       // Emit the new message to relevant clients
       if (newMessage.message_type === "private" && newMessage.recipient_id) {
-        // Find sender's and recipient's sockets
-        const senderSocketId = activeUsers[userId]?.sid;
-        const recipientSocketId = activeUsers[newMessage.recipient_id]?.sid;
-
-        if (senderSocketId) io.to(senderSocketId).emit("message", newMessage);
-        if (recipientSocketId && senderSocketId !== recipientSocketId) {
-          io.to(recipientSocketId).emit("message", newMessage);
-        }
+        // For private messages, ensure both sender and recipient are joined to the actualRoomId
+        // and emit to that specific room.
+        // It's crucial that both sender and recipient join this `actualRoomId` on the frontend
+        // when initiating or switching to a private chat.
+        io.to(actualRoomId).emit("message", newMessage);
         console.log(
-          `Private message sent from ${username} to ${newMessage.recipient_id}`
+          `Private message sent from ${username} to ${newMessage.recipient_id}. Room: ${actualRoomId}`
         );
       } else {
-        // Public message
-        io.to(roomId).emit("message", newMessage);
-        console.log(`Public message sent to ${roomId}`);
+        io.to(actualRoomId).emit("message", newMessage); // For public chat or if recipient_id is null/missing
+        console.log(`Public message sent to ${actualRoomId}.`);
       }
 
       // Broadcast the updated list of active users to all clients immediately
@@ -343,14 +430,15 @@ io.on("connection", (socket) => {
       );
     } catch (error) {
       console.error("Error saving chat message:", error);
+      socket.emit("error", "Failed to send message: " + error.message);
     }
   });
 
-  // NEW: Handle message editing
+  // Handle message editing
   socket.on("edit_message", async (data) => {
-    const { messageId, newText, userId } = data; // userId for authorization check
+    const { messageId, newText, userId, file_data, file_name, file_type } =
+      data;
     try {
-      // Fetch original message to ensure user is the sender and message exists
       const [originalMsgRows] = await db.query(
         "SELECT user_id, is_deleted, message_type, room_id, recipient_id FROM chat_messages WHERE message_id = ?",
         [messageId]
@@ -372,44 +460,56 @@ io.on("connection", (socket) => {
 
       const now = new Date();
       await db.query(
-        "UPDATE chat_messages SET message_text = ?, edited_at = ? WHERE message_id = ?",
-        [newText, now, messageId]
+        "UPDATE chat_messages SET message_text = ?, edited_at = ?, file_data = ?, file_name = ?, file_type = ? WHERE message_id = ?",
+        [
+          newText,
+          now,
+          file_data || null,
+          file_name || null,
+          file_type || null,
+          messageId,
+        ]
       );
 
-      // Fetch the updated message to send back with all fields
       const [updatedMsgRows] = await db.query(
         `SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
-                 FROM chat_messages
-                 WHERE message_id = ?`,
+           FROM chat_messages
+           WHERE message_id = ?`,
         [messageId]
       );
 
       const updatedMessage = {
         ...updatedMsgRows[0],
-        reactions: updatedMsgRows[0].reactions || [],
+        // MODIFIED: Added check for reactions.length > 0
+        reactions:
+          updatedMsgRows[0].reactions && updatedMsgRows[0].reactions.length > 0
+            ? (() => {
+                try {
+                  return JSON.parse(updatedMsgRows[0].reactions);
+                } catch (e) {
+                  console.error(
+                    `Error parsing reactions for message ID ${updatedMsgRows[0].message_id}:`,
+                    e.message,
+                    `Raw reactions: ${updatedMsgRows[0].reactions}`
+                  );
+                  return [];
+                }
+              })()
+            : [],
         file_data: updatedMsgRows[0].file_data || null,
         file_name: updatedMsgRows[0].file_name || null,
         file_type: updatedMsgRows[0].file_type || null,
       };
 
-      // Emit update to relevant clients (public room or private participants)
-      if (
-        updatedMessage.message_type === "private" &&
-        updatedMessage.recipient_id
-      ) {
-        const senderSocketId = activeUsers[userId]?.sid;
-        const recipientSocketId = activeUsers[updatedMessage.recipient_id]?.sid;
-        if (senderSocketId)
-          io.to(senderSocketId).emit("message_updated", updatedMessage);
-        if (recipientSocketId && senderSocketId !== recipientSocketId) {
-          io.to(recipientSocketId).emit("message_updated", updatedMessage);
-        }
-      } else {
-        io.to(originalMessage.room_id).emit("message_updated", updatedMessage);
-      }
+      // Determine the room to emit to
+      const roomToEmit =
+        updatedMessage.message_type === "private" && updatedMessage.recipient_id
+          ? getPrivateChatRoomId(userId, updatedMessage.recipient_id)
+          : updatedMessage.room_id; // For public, use original room_id
+
+      io.to(roomToEmit).emit("message_updated", updatedMessage);
       console.log(`Message ${messageId} edited by user ${userId}.`);
 
-      // Update user activity after editing
       if (activeUsers[userId]) {
         activeUsers[userId].lastActivity = Date.now();
       }
@@ -419,9 +519,9 @@ io.on("connection", (socket) => {
     }
   });
 
-  // NEW: Handle message deletion
+  // Handle message deletion
   socket.on("delete_message", async (data) => {
-    const { messageId, userId } = data; // userId for authorization check
+    const { messageId, userId } = data;
     try {
       const [originalMsgRows] = await db.query(
         "SELECT user_id, message_type, room_id, recipient_id FROM chat_messages WHERE message_id = ?",
@@ -438,46 +538,50 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // Mark as deleted instead of actual deletion to preserve history
       await db.query(
         "UPDATE chat_messages SET is_deleted = TRUE, message_text = 'This message has been deleted.', file_data = NULL, file_name = NULL, file_type = NULL, reactions = '[]' WHERE message_id = ?",
         [messageId]
       );
 
-      // Fetch the updated message to send back with all fields (now marked deleted)
       const [updatedMsgRows] = await db.query(
         `SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
-                 FROM chat_messages
-                 WHERE message_id = ?`,
+           FROM chat_messages
+           WHERE message_id = ?`,
         [messageId]
       );
 
       const updatedMessage = {
         ...updatedMsgRows[0],
-        reactions: updatedMsgRows[0].reactions || [],
+        // MODIFIED: Added check for reactions.length > 0
+        reactions:
+          updatedMsgRows[0].reactions && updatedMsgRows[0].reactions.length > 0
+            ? (() => {
+                try {
+                  return JSON.parse(updatedMsgRows[0].reactions);
+                } catch (e) {
+                  console.error(
+                    `Error parsing reactions for message ID ${updatedMsgRows[0].message_id}:`,
+                    e.message,
+                    `Raw reactions: ${updatedMsgRows[0].reactions}`
+                  );
+                  return [];
+                }
+              })()
+            : [],
         file_data: updatedMsgRows[0].file_data || null,
         file_name: updatedMsgRows[0].file_name || null,
         file_type: updatedMsgRows[0].file_type || null,
       };
 
-      // Emit update to relevant clients (public room or private participants)
-      if (
-        updatedMessage.message_type === "private" &&
-        updatedMessage.recipient_id
-      ) {
-        const senderSocketId = activeUsers[userId]?.sid;
-        const recipientSocketId = activeUsers[updatedMessage.recipient_id]?.sid;
-        if (senderSocketId)
-          io.to(senderSocketId).emit("message_updated", updatedMessage);
-        if (recipientSocketId && senderSocketId !== recipientSocketId) {
-          io.to(recipientSocketId).emit("message_updated", updatedMessage);
-        }
-      } else {
-        io.to(originalMessage.room_id).emit("message_updated", updatedMessage);
-      }
+      // Determine the room to emit to
+      const roomToEmit =
+        updatedMessage.message_type === "private" && updatedMessage.recipient_id
+          ? getPrivateChatRoomId(userId, updatedMessage.recipient_id)
+          : updatedMessage.room_id;
+
+      io.to(roomToEmit).emit("message_updated", updatedMessage);
       console.log(`Message ${messageId} deleted by user ${userId}.`);
 
-      // Update user activity after deleting
       if (activeUsers[userId]) {
         activeUsers[userId].lastActivity = Date.now();
       }
@@ -496,7 +600,6 @@ io.on("connection", (socket) => {
     }
 
     try {
-      // Corrected: Changed 'image_data' to 'file_data' in the SELECT query
       const [messages] = await db.query(
         "SELECT reactions, file_data, file_name, file_type, message_type, room_id, recipient_id, is_deleted FROM chat_messages WHERE message_id = ?",
         [messageId]
@@ -506,12 +609,26 @@ io.on("connection", (socket) => {
         return;
       }
       if (messages[0].is_deleted) {
-        // Prevent reacting to deleted messages
         socket.emit("error", "Cannot react to a deleted message.");
         return;
       }
 
-      let currentReactions = messages[0]?.reactions || [];
+      // MODIFIED: Added check for messages[0].reactions.length > 0
+      let currentReactions =
+        messages[0]?.reactions && messages[0].reactions.length > 0
+          ? (() => {
+              try {
+                return JSON.parse(messages[0].reactions);
+              } catch (e) {
+                console.error(
+                  `Error parsing reactions for message ID ${messages[0].message_id}:`,
+                  e.message,
+                  `Raw reactions: ${messages[0].reactions}`
+                );
+                return [];
+              }
+            })()
+          : [];
 
       const existingReactionIndex = currentReactions.findIndex(
         (r) => r.emoji === emoji
@@ -546,39 +663,48 @@ io.on("connection", (socket) => {
 
       const [updatedMsgRows] = await db.query(
         `SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
-                 FROM chat_messages
-                 WHERE message_id = ?`,
+           FROM chat_messages
+           WHERE message_id = ?`,
         [messageId]
       );
 
       const updatedMessage = {
         ...updatedMsgRows[0],
-        reactions: updatedMsgRows[0].reactions || [],
+        // MODIFIED: Added check for updatedMsgRows[0].reactions.length > 0
+        reactions:
+          updatedMsgRows[0].reactions && updatedMsgRows[0].reactions.length > 0
+            ? (() => {
+                try {
+                  return JSON.parse(updatedMsgRows[0].reactions);
+                } catch (e) {
+                  console.error(
+                    `Error parsing reactions for message ID ${updatedMsgRows[0].message_id}:`,
+                    e.message,
+                    `Raw reactions: ${updatedMsgRows[0].reactions}`
+                  );
+                  return [];
+                }
+              })()
+            : [],
         file_data: updatedMsgRows[0].file_data || null,
         file_name: updatedMsgRows[0].file_name || null,
         file_type: updatedMsgRows[0].file_type || null,
       };
 
-      // Emit update to relevant clients (public room or private participants)
-      if (
-        updatedMessage.message_type === "private" &&
-        updatedMessage.recipient_id
-      ) {
-        const senderSocketId = activeUsers[userId]?.sid;
-        const recipientSocketId = activeUsers[updatedMessage.recipient_id]?.sid;
-        if (senderSocketId)
-          io.to(senderSocketId).emit("message_updated", updatedMessage);
-        if (recipientSocketId && senderSocketId !== recipientSocketId) {
-          io.to(recipientSocketId).emit("message_updated", updatedMessage);
-        }
-      } else {
-        io.to(updatedMessage.room_id).emit("message_updated", updatedMessage);
-      }
+      // Determine the room to emit to
+      const roomToEmit =
+        updatedMessage.message_type === "private" && updatedMessage.recipient_id
+          ? getPrivateChatRoomId(
+              messages[0].user_id, // Original sender (assuming messages[0] is the original message)
+              messages[0].recipient_id // Original recipient
+            )
+          : updatedMessage.room_id; // For public, use original room_id
+
+      io.to(roomToEmit).emit("message_updated", updatedMessage);
       console.log(
         `Broadcasted updated message ${messageId} with new reactions.`
       );
 
-      // Update user activity after reacting
       if (activeUsers[userId]) {
         activeUsers[userId].lastActivity = Date.now();
       }
@@ -591,26 +717,30 @@ io.on("connection", (socket) => {
   // Handles user typing indicator
   socket.on("typing", (data) => {
     // Broadcast to others in the room that someone is typing, exclude sender
+    const roomToSend =
+      data.message_type === "private" && data.recipient_id
+        ? getPrivateChatRoomId(data.userId, data.recipient_id)
+        : data.roomId || PUBLIC_CHAT_ROOM_ID;
+
     socket
-      .to(data.roomId || PUBLIC_CHAT_ROOM_ID)
+      .to(roomToSend)
       .emit("typing", { userId: data.userId, username: data.username });
-    // Update user activity on typing as well
     if (activeUsers[data.userId]) {
       activeUsers[data.userId].lastActivity = Date.now();
     }
   });
 
   socket.on("stop_typing", (data) => {
-    // Broadcast to others in the room that someone stopped typing, exclude sender
-    socket
-      .to(data.roomId || PUBLIC_CHAT_ROOM_ID)
-      .emit("stop_typing", { userId: data.userId });
+    const roomToSend =
+      data.message_type === "private" && data.recipient_id
+        ? getPrivateChatRoomId(data.userId, data.recipient_id)
+        : data.roomId || PUBLIC_CHAT_ROOM_ID;
+    socket.to(roomToSend).emit("stop_typing", { userId: data.userId });
   });
 
   // Handles client disconnection
   socket.on("disconnect", () => {
     console.log(`Client disconnected: ${socket.id}`);
-    // Remove the user directly from activeUsers if their socket disconnects
     let disconnectedUserId = null;
     for (const userId in activeUsers) {
       if (activeUsers[userId].sid === socket.id) {
@@ -623,7 +753,6 @@ io.on("connection", (socket) => {
       console.log(
         `User ${disconnectedUserId} removed from active users due to disconnect.`
       );
-      // Broadcast the updated list of active users to all clients immediately
       io.emit(
         "online_users",
         Object.values(activeUsers).map((u) => ({
@@ -652,7 +781,6 @@ setInterval(() => {
     }
   }
 
-  // Only broadcast if there was a change or if the count is different from last known
   const currentActiveUsersCount = Object.keys(activeUsers).length;
   if (
     usersRemovedThisCycle > 0 ||
@@ -671,9 +799,8 @@ setInterval(() => {
     );
     lastKnownActiveUsersCount = currentActiveUsersCount;
   }
-}, 30 * 1000); // Run this check every 30 seconds
+}, 30 * 1000);
 
-// Start the server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running and listening on port ${PORT}`);

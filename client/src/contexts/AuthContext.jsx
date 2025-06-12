@@ -20,9 +20,9 @@ export const AuthProvider = ({ children }) => {
   // user state will hold the authenticated user's data (e.g., { userid, username, email, avatar_url })
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true); // To indicate if auth state is being loaded
+  const [authReady, setAuthReady] = useState(false); // New state to indicate when auth check is complete
 
   // Function to check user's login status (e.g., via token in localStorage)
-  // This is a placeholder for a real check with your backend
   const checkAuthStatus = useCallback(async () => {
     setLoading(true);
     const token = localStorage.getItem("token"); // Assuming JWT token is stored here
@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       try {
         // Call your backend to verify the token and get user details
-        // This is the /api/check-user endpoint you have in app.js
         const response = await fetch("http://localhost:5000/api/check-user", {
           method: "GET",
           headers: {
@@ -42,22 +41,24 @@ export const AuthProvider = ({ children }) => {
         if (response.ok) {
           const data = await response.json();
           setUser(data.user); // Set the user data from the backend response
-          console.log("User authenticated via token:", data.user);
+          console.log("AuthContext: User authenticated via token:", data.user);
         } else {
-          console.error("Token verification failed or expired.");
+          console.error("AuthContext: Token verification failed or expired.");
           localStorage.removeItem("token"); // Remove invalid token
           setUser(null);
         }
       } catch (error) {
-        console.error("Error checking auth status:", error);
+        console.error("AuthContext: Error checking auth status:", error);
         localStorage.removeItem("token");
         setUser(null);
       } finally {
-        setLoading(false);
+        setLoading(false); // Mark loading as complete
+        setAuthReady(true); // Mark auth as ready
       }
     } else {
       setUser(null);
-      setLoading(false);
+      setLoading(false); // Mark loading as complete
+      setAuthReady(true); // Mark auth as ready (even if no token)
     }
   }, []);
 
@@ -77,15 +78,19 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         localStorage.setItem("token", data.token); // Store the JWT token
         setUser(data.user); // Set the user data
-        console.log("Login successful:", data.user);
+        setAuthReady(true); // Mark auth as ready on successful login
+        console.log("AuthContext: Login successful:", data.user);
         return { success: true, message: "Login successful!" };
       } else {
         // Handle login errors from backend
-        console.error("Login failed:", data.message);
+        console.error("AuthContext: Login failed:", data.message);
         return { success: false, message: data.message || "Login failed." };
       }
     } catch (error) {
-      console.error("Network or server error during login:", error);
+      console.error(
+        "AuthContext: Network or server error during login:",
+        error
+      );
       return { success: false, message: "Network error. Please try again." };
     }
   };
@@ -94,7 +99,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("token"); // Remove token from local storage
     setUser(null); // Clear user state
-    console.log("User logged out.");
+    // Keep authReady as true, as the auth check is still complete, just the user is now null
+    console.log("AuthContext: User logged out.");
   };
 
   // Effect to run once on component mount to check initial auth status
@@ -106,6 +112,7 @@ export const AuthProvider = ({ children }) => {
   const authContextValue = {
     user,
     loading, // Expose loading state
+    authReady, // Expose authReady state
     login,
     logout,
     isAuthenticated: !!user, // Convenience boolean
