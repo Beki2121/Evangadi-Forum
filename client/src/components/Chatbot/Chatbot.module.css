@@ -13,7 +13,9 @@
   background-color: #fcfcfc; /* Very light background */
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; /* Modern font */
 }
-
+h1 {
+  padding: 10px;
+}
 /* Chat Header with Title and Buttons */
 .chatHeader {
   display: flex;

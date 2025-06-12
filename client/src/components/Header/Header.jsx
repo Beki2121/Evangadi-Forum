@@ -1,84 +1,101 @@
 import { useContext } from "react";
-import classes from "./header.module.css";
-import EvangadiLogo from "../../Assets/Images/evangadi-logo-header.png";
 import { Link } from "react-router-dom";
+import { Navbar, Nav, Container } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { Navbar, Nav, Button, Container } from "react-bootstrap";
-import { UserState } from "../../App.jsx";
+// Import Lucide React Icons for profile and logout
+import { UserCircle2, LogOut } from "lucide-react";
+
+import classes from "./header.module.css"; // Ensure this path is correct
+import EvangadiLogo from "../../Assets/Images/evangadi-logo-header.png";
+import { UserState } from "../../App.jsx"; // Assuming UserState is provided by App.jsx context
 
 function Header() {
   const { user } = useContext(UserState);
   const userId = user?.userid;
 
   const handleSignOut = () => {
-    localStorage.removeItem("token"); //remove the auth token
-    window.location.replace("/auth"); //redirect to auth page so that user can login again
+    localStorage.removeItem("token");
+    // Using window.location.replace to prevent going back to a logged-in state page
+    window.location.replace("/auth");
   };
 
   return (
-    <>
-      <Navbar
-        bg="light "
-        variant="light"
-        expand="md"
-        className="px-3"
-        style={{
-          position: "sticky",
-          top: "0",
-          zIndex: "3",
-          backgroundColor: "white",
-          borderBottom: "1px solid #dee2e6",
-        }}
-      >
-        <Container className={classes.header_container}>
-          <Navbar.Brand href="/">
-            <img
-              src={EvangadiLogo}
-              className="d-inline-block align-top"
-              alt="Evangadi Logo"
-              width="200"
-            />
-          </Navbar.Brand>
-          <Navbar.Toggle aria-controls="basic-navbar-nav  d-md-none">
-            <span className="navbar-toggler-icon"></span>
-          </Navbar.Toggle>
-          <Navbar.Collapse
-            id="basic-navbar-nav"
-            className=" w-50 flex-md-row"
-            style={{ alignSelf: "flex-end" }}
-          >
-            <Nav className="flex-column flex-md-row w-100 justify-content-end nav-links-holder">
-              {userId ? (
-                <Nav.Link as={Link} to="/" className={classes.navigation_links}>
-                  Home
-                </Nav.Link>
-              ) : null}
+    <Navbar
+      expand="md" // Collapses on medium and smaller screens
+      className={classes.navbar_custom} // Apply custom styling to the Navbar itself
+    >
+      <Container className={classes.header_container}>
+        {/* Brand Logo */}
+        <Navbar.Brand as={Link} to="/">
+          <img src={EvangadiLogo} alt="Evangadi Logo" width="200" />
+        </Navbar.Brand>
 
+        {/* Navbar Toggler for mobile */}
+        <Navbar.Toggle aria-controls="basic-navbar-nav">
+          <span className="navbar-toggler-icon"></span>
+        </Navbar.Toggle>
+
+        {/* Collapsible content (navigation links, logout, profile icon) */}
+        <Navbar.Collapse
+          id="basic-navbar-nav"
+          className={classes.navbar_collapse_custom}
+        >
+          <Nav className={classes.nav_links_holder}>
+            {/* Conditional Home Link */}
+            {userId && (
+              <Nav.Link as={Link} to="/" className={classes.navigation_links}>
+                Home
+              </Nav.Link>
+            )}
+            {/* Conditional Chat Link */}
+            {userId && (
               <Nav.Link
                 as={Link}
-                to="/howitworks"
+                to="/public-chat"
                 className={classes.navigation_links}
               >
-                How it Works
+                Chat
               </Nav.Link>
-              {userId ? (
-                <Button onClick={handleSignOut} className={classes.logout_btn}>
-                  Logout
-                </Button>
-              ) : (
+            )}
+            {/* How it Works Link */}
+            <Nav.Link
+              as={Link}
+              to="/howitworks"
+              className={classes.navigation_links}
+            >
+              How it Works
+            </Nav.Link>
+
+            {/* Conditional rendering for authenticated vs. unauthenticated user */}
+            {userId ? (
+              // Authenticated user: Logout button and Profile Icon
+              <>
+                <button onClick={handleSignOut} className={classes.logout_btn}>
+                  <LogOut size={18} className={classes.icon_space} /> Logout
+                </button>
                 <Nav.Link
                   as={Link}
-                  to="/auth"
-                  className={`${classes.navigation_links} ${classes.login_btn}`}
+                  to={`/profile/${userId}`}
+                  className={classes.profile_icon_link} // Styling for profile circle
+                  title={user?.username} // Tooltip for username
                 >
-                  Login
+                  <UserCircle2 size={30} /> {/* Profile Icon */}
                 </Nav.Link>
-              )}
-            </Nav>
-          </Navbar.Collapse>
-        </Container>
-      </Navbar>
-    </>
+              </>
+            ) : (
+              // Unauthenticated user: Login button
+              <Nav.Link
+                as={Link}
+                to="/auth"
+                className={`${classes.navigation_links} ${classes.login_btn}`}
+              >
+                Login
+              </Nav.Link>
+            )}
+          </Nav>
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
   );
 }
 

@@ -10,7 +10,7 @@ const {
 const authMiddleware = require("../middleware/authMiddleware"); // Import it here
 
 // get all questions
-router.get("/questions", getAllQuestions);
+router.get("/questions", authMiddleware, getAllQuestions);
 
 // get single question and its answers
 router.get("/question/:questionId", getQuestionAndAnswer);

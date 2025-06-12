@@ -10,7 +10,8 @@ import AuthLayout from "../Pages/AuthLayout/AuthLayout.jsx";
 import HowItWorks from "../Pages/HowItWorks/HowItWorks.jsx";
 import Chatbot from "../components/Chatbot/Chatbot.jsx";
 import PrivateRoute from "./PrivateRoute.jsx"; // Import your PrivateRoute component
-
+import PublicChatPage from "../Pages/PublicChatPage/PublicChatPage.jsx";
+import UserProfile from "../Pages/UserProfile/UserProfile.jsx"; // Import UserProfile component
 function AppRouter() {
   return (
     <Routes>
@@ -28,6 +29,8 @@ function AppRouter() {
         <Route path="/ask" element={<AskQuestion />} />
         <Route path="/question/:questionId" element={<QuestionAndAnswer />} />
         <Route path="/chatbot" element={<Chatbot />} />
+        <Route path="/public-chat" element={<PublicChatPage />} />
+        <Route path="/profile/:userid" element={<UserProfile />} />
         {/* Add any other routes that should only be accessible when logged in here */}
       </Route>
     </Routes>

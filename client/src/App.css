@@ -4,18 +4,20 @@
   --primary-color: #fe8402;
   --primary-shade: #fc9b34;
   --blue-main: #516cf0;
-  --blue-shade: #7186ef;
-
-
+  --blue-shade: #7186ef; /* Example darker blue for hover/secondary */
+  --green-success: #28a745;
+  --red-error: #dc3545;
+  --yellow-warning: #ffc107;
+  --info-blue: #17a2b8;
   --header-font: "montserrat";
   --body-text-font: "Poppins";
-  --decorative-text:"dancing script"
+  --decorative-text: "dancing script";
 }
 * {
   padding: 0;
   margin: 0;
   font-family: sans-serif !important;
-  font-family: var(--body-text-font),sans-serif !important;
+  font-family: var(--body-text-font), sans-serif !important;
   box-sizing: border-box;
 }
 
@@ -25,6 +27,5 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--header-font) ,sans-serif !important;
-  
+  font-family: var(--header-font), sans-serif !important;
 }

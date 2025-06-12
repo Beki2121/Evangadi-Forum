@@ -159,26 +159,26 @@ async function getAllChatSessions(req, res) {
         MAX(timestamp) AS last_updated_at,
         SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN role = 'user' THEN content END ORDER BY timestamp ASC), ',', 1) AS first_user_message
       FROM chat_history
-      WHERE user_id = ? -- Uncomment and add params.push(userId) if filtering by user
+      -- WHERE user_id = ? -- Uncomment and add params.push(userId) if filtering by user
       GROUP BY session_id
       ORDER BY last_updated_at DESC
     `;
     let params = [];
 
     // If you plan to filter by user:
-    if (userId) {
-      query = `
-        SELECT
-          session_id,
-          MAX(timestamp) AS last_updated_at,
-          SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN role = 'user' THEN content END ORDER BY timestamp ASC), ',', 1) AS first_user_message
-        FROM chat_history
-        WHERE user_id = ?
-        GROUP BY session_id
-        ORDER BY last_updated_at DESC
-      `;
-      params = [userId];
-    }
+    // if (userId) {
+    //   query = `
+    //     SELECT
+    //       session_id,
+    //       MAX(timestamp) AS last_updated_at,
+    //       SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN role = 'user' THEN content END ORDER BY timestamp ASC), ',', 1) AS first_user_message
+    //     FROM chat_history
+    //     WHERE user_id = ?
+    //     GROUP BY session_id
+    //     ORDER BY last_updated_at DESC
+    //   `;
+    //   params = [userId];
+    // }
 
     const [rows] = await dbConnection.execute(query, params);
 

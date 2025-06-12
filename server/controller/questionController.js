@@ -106,6 +106,7 @@ async function getQuestionAndAnswer(req, res) {
         ORDER BY a.createdAt DESC`,
       [questionid]
     );
+    // questionDetails.answers = answersRows;
 
     questionDetails.answers = answersRows.map((answer) => ({
       answerid: answer.answerid,

@@ -39,8 +39,13 @@ function App() {
       ] = `Bearer ${token}`;
 
       const response = await axiosInstance.get("/user/check");
-      const userData = response.data;
-      console.log("Fetched user data:", userData);
+      // --- IMPORTANT FIX START ---
+      // The API returns { user: { username, userid } }.
+      // We need to extract the inner 'user' object.
+      const userData = response.data.user;
+      // --- IMPORTANT FIX END ---
+
+      console.log("Fetched user data:", userData); // This will now log the direct user object
       setUser(userData);
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -49,7 +54,7 @@ function App() {
       localStorage.removeItem("EV-Forum-user");
       delete axiosInstance.defaults.headers.common["Authorization"];
     } finally {
-      setLoadingUser(false); // <--- This is set to false after the fetch completes
+      setLoadingUser(false);
     }
   };
 

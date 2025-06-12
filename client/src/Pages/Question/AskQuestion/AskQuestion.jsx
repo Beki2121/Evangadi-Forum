@@ -1,4 +1,4 @@
-import { useContext, useRef, useState } from "react";
+import { useContext, useRef } from "react"; // Remove useState
 import classes from "./askQuestion.module.css";
 import { axiosInstance } from "../../../utility/axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -6,13 +6,14 @@ import Layout from "../../../Layout/Layout.jsx";
 import { UserState } from "../../../App.jsx";
 import Swal from "sweetalert2";
 
-import Chatbot from "../../../components/Chatbot/Chatbot.jsx";
+// REMOVE THIS IMPORT: import Chatbot from "../../../components/Chatbot/Chatbot.jsx";
 
 function AskQuestion() {
   const navigate = useNavigate();
   const { user } = useContext(UserState);
 
-  const [showChatbot, setShowChatbot] = useState(false);
+  // REMOVE THESE STATES:
+  // const [showChatbot, setShowChatbot] = useState(false);
 
   const titleDom = useRef();
   const descriptionDom = useRef();
@@ -62,17 +63,16 @@ function AskQuestion() {
     }
   }
 
-  const toggleChatbotVisibility = () => {
-    setShowChatbot((prev) => !prev);
-  };
+  // REMOVE THIS FUNCTION:
+  // const toggleChatbotVisibility = () => {
+  //   setShowChatbot((prev) => !prev);
+  // };
 
   return (
     <Layout>
       <div className={classes.allContainer}>
         {/* Left Section: Question Form */}
         <div className={classes.columnSection}>
-          {" "}
-          {/* Apply new common class */}
           <div className={classes.question__wrapper}>
             <h3 className={classes.question__header__title}>
               <span className={classes.highlight}>
@@ -138,26 +138,34 @@ function AskQuestion() {
                     Back to Home
                   </button>
                 </Link>
-                <button
-                  className={classes.question__btn}
-                  type="button"
+                {/* REMOVE CHATBOT BUTTON/ICON HERE */}
+                {/* <div
+                  className={classes.chatbotIconWrapper}
                   onClick={toggleChatbotVisibility}
+                  title={showChatbot ? "Hide Chatbot" : "Ask Chatbot"}
                 >
-                  {showChatbot ? "Hide Chatbot" : "Ask Chatbot"}
-                </button>
+                  <span className={classes.chatbotIcon}>🤖</span>
+                </div> */}
               </div>
             </form>
           </div>
+          {/* REMOVE CHATBOT TOGGLE AREA HERE */}
+          {/* <div className={classes.chatbotToggleArea}>
+            <span className={classes.askChatbotText}>Ask Chatbot</span>
+            <div
+              className={classes.chatbotIconWrapper}
+              onClick={toggleChatbotVisibility}
+              title={showChatbot ? "Hide Chatbot" : "Ask Chatbot"}
+            >
+              <span className={classes.chatbotIcon}>🤖</span>
+            </div>
+          </div> */}
         </div>
 
-        {/* Right Section: AI Chatbot Integration (Conditionally Rendered) */}
-        {showChatbot && (
+        {/* REMOVE CONDITIONAL CHATBOT RENDERING HERE */}
+        {/* {showChatbot && (
           <div className={classes.columnSection}>
-            {" "}
-            {/* Apply new common class */}
             <div className={classes.aiChatContentWrapper}>
-              {" "}
-              {/* New wrapper for content inside the AI column */}
               <h3 className={classes.question__header__title}>
                 <span className={classes.highlight}>
                   Get AI Assistance for Your Question
@@ -170,7 +178,7 @@ function AskQuestion() {
               <Chatbot />
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </Layout>
   );
