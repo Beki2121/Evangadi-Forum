@@ -1,3 +1,4 @@
+// userRoute.jsx
 const express = require("express");
 const router = express.Router();
 
@@ -10,6 +11,7 @@ const {
   getAllUsers,
   forgotPassword,
   resetPassword,
+  verifyEmail, // ADDED: Import the new verifyEmail function
 } = require("../controller/userController.js");
 
 const authMiddleware = require("../middleware/authMiddleware.js");
@@ -25,6 +27,9 @@ router.post("/forgot-password", forgotPassword);
 
 // Reset password route (uses token in URL)
 router.post("/reset-password/:token", resetPassword);
+
+// ADDED: Email verification route
+router.get("/verify-email/:token", verifyEmail);
 
 // Check user authentication status (protected)
 router.get("/check", authMiddleware, check);

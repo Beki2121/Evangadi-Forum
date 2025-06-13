@@ -13,6 +13,7 @@ import PrivateRoute from "./PrivateRoute.jsx"; // Import your PrivateRoute compo
 import PublicChatPage from "../Pages/PublicChatPage/PublicChatPage.jsx";
 import UserProfile from "../Pages/UserProfile/UserProfile.jsx"; // Import UserProfile component
 import ResetPassword from "../Pages/ForgotPassword/ResetPassword.jsx";
+import VerifyEmail from "../Pages/SignUp/VerifyEmail.jsx";
 function AppRouter() {
   return (
     <Routes>
@@ -25,6 +26,7 @@ function AppRouter() {
       <Route path="/public-chat" element={<PublicChatPage />} />\
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/verify-email/:token" element={<VerifyEmail />} />
       {/* Protected Routes (require login) */}
       {/* Wrap all routes that need authentication inside a PrivateRoute */}
       <Route element={<PrivateRoute />}>
