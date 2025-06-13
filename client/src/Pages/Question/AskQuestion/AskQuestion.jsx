@@ -149,17 +149,6 @@ function AskQuestion() {
               </div>
             </form>
           </div>
-          {/* REMOVE CHATBOT TOGGLE AREA HERE */}
-          {/* <div className={classes.chatbotToggleArea}>
-            <span className={classes.askChatbotText}>Ask Chatbot</span>
-            <div
-              className={classes.chatbotIconWrapper}
-              onClick={toggleChatbotVisibility}
-              title={showChatbot ? "Hide Chatbot" : "Ask Chatbot"}
-            >
-              <span className={classes.chatbotIcon}>🤖</span>
-            </div>
-          </div> */}
         </div>
 
         {/* REMOVE CONDITIONAL CHATBOT RENDERING HERE */}

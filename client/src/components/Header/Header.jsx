@@ -15,7 +15,6 @@ function Header() {
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
-    // Using window.location.replace to prevent going back to a logged-in state page
     window.location.replace("/auth");
   };
 

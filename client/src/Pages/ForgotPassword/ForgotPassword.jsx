@@ -1,65 +1,74 @@
-import  { useState } from "react";
-import { axiosInstance } from "../../utility/axios";
-import classes from "./ForgotPassword.module.css";
-import Layout from "../../Layout/Layout.jsx";
+// ForgotPassword.jsx
+import { useState } from "react";
+import { axiosInstance } from "../../utility/axios"; // Assuming this path is correct
+import Swal from "sweetalert2";
+import styles from "./ForgotPassword.module.css";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
-
-  const handleChange = (e) => {
-    setEmail(e.target.value);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const response = await axiosInstance.post("/user/forgotPassword", {
-        email,
+
+    if (!email) {
+      Swal.fire({
+        icon: "warning",
+        title: "Missing Email",
+        text: "Please enter your email address.",
       });
-      if (response.status === 200) {
-        setMessage("Password reset link has been sent to your email.");
-        setError(null);
-      } else {
-        setError(response.data.msg || "Failed to send password reset link.");
-        setMessage(null);
-      }
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: "Sending reset link...",
+        didOpen: () => {
+          Swal.showLoading();
+        },
+        allowOutsideClick: false,
+      });
+
+      // CHANGED: Path is now '/user/forgot-password' as baseURL covers '/api/v1'
+      const res = await axiosInstance.post("/user/forgot-password", { email });
+
+      Swal.close();
+
+      Swal.fire({
+        icon: "success",
+        title: "Email Sent!",
+        text: res.data.msg || "A reset link has been sent to your email.",
+        timer: 4000,
+        timerProgressBar: true,
+      });
+
+      setEmail("");
     } catch (err) {
-      setError(
-        err.response?.data?.msg || "Error sending reset link. Please try again."
-      );
-      setMessage(null);
+      Swal.close();
+
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.response?.data?.msg || "Something went wrong. Try again.",
+      });
     }
   };
 
   return (
-    <Layout>
-    <div className={classes.formcontainer}>
-      <div className={classes.innerContainer}>
-        <h2>Forgot your password?</h2>
-        <p>
-          Enter your email address, and we&apos;ll send you a link to reset your
-          password.
-        </p>
-        {message && <p className={classes.success}>{message}</p>}
-        {error && <p className={classes.error}>{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            name="email"
-            placeholder="Email address"
-            value={email}
-            onChange={handleChange}
-            required
-          />
-          <button type="submit" className={classes.submitbtn}>
-            Send reset link
-          </button>
-        </form>
-      </div>
+    <div className={styles.container}>
+      <h2 className={styles.title}>Forgot Password</h2>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <input
+          type="email"
+          placeholder="Enter your email"
+          className={styles.input}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <button type="submit" className={styles.button}>
+          Send Reset Link
+        </button>
+      </form>
     </div>
-    </Layout>
   );
 }
 

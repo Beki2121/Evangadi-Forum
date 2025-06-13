@@ -12,17 +12,19 @@ import Chatbot from "../components/Chatbot/Chatbot.jsx";
 import PrivateRoute from "./PrivateRoute.jsx"; // Import your PrivateRoute component
 import PublicChatPage from "../Pages/PublicChatPage/PublicChatPage.jsx";
 import UserProfile from "../Pages/UserProfile/UserProfile.jsx"; // Import UserProfile component
+import ResetPassword from "../Pages/ForgotPassword/ResetPassword.jsx";
 function AppRouter() {
   return (
     <Routes>
       {/* Public Routes (accessible without login) */}
       <Route path="/auth" element={<AuthLayout />} />
-      <Route path="/forgetPass" element={<ForgotPassword />} />
       <Route path="/howitworks" element={<HowItWorks />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
       <Route path="*" element={<PageNotFound />} /> {/* Keep 404 last */}
-      <Route path="/public-chat" element={<PublicChatPage />} />
+      <Route path="/public-chat" element={<PublicChatPage />} />\
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
       {/* Protected Routes (require login) */}
       {/* Wrap all routes that need authentication inside a PrivateRoute */}
       <Route element={<PrivateRoute />}>

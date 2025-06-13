@@ -52,6 +52,9 @@ const Chatbot = forwardRef((props, ref) => {
           const response = await axios.get(
             `${API_HISTORY_URL}?sessionId=${currentSession}`
           );
+          // const response = await api.get(
+          //   `/history?sessionId=${currentSession}`
+          // );
           if (response.data.history && response.data.history.length > 0) {
             setMessages(response.data.history);
           } else {
@@ -98,6 +101,10 @@ const Chatbot = forwardRef((props, ref) => {
         sessionId: sessionId,
         // userId: YOUR_USER_ID_HERE, // Pass actual user ID if available
       });
+      // const response = await api.post("/chat", {
+      //   message: userMessage.parts,
+      //   sessionId: sessionId,
+      // });
 
       const aiReply = { role: "model", parts: response.data.reply };
       setMessages((prevMessages) => [...prevMessages, aiReply]);

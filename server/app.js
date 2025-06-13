@@ -1,14 +1,38 @@
-// app.js
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const db = require("./config/dbConfig");
 const initializeDatabase = require("./config/TableSchema");
+const authMiddleware = require("./middleware/authMiddleware");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-
 const app = express();
+// Public route
+app.get("/", (req, res) => {
+  res.send("Hello, world! This is a public route.");
+});
+
+// Login simulation route to issue JWT token (for testing)
+app.post("/login", (req, res) => {
+  const { username, userid } = req.body;
+  if (!username || !userid) {
+    return res.status(400).json({ msg: "username and userid required" });
+  }
+
+  const token = jwt.sign({ username, userid }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
+  res.json({ token });
+});
+
+// Protected route using authMiddleware
+app.get("/protected", authMiddleware, (req, res) => {
+  res.json({
+    msg: "You accessed a protected route!",
+    user: req.user,
+  });
+});
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -16,7 +40,6 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
-
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 
@@ -125,13 +148,6 @@ app.use("/api/v1", questionRoutes);
 const answerRoutes = require("./routes/answerRoute");
 app.use("/api/v1", answerRoutes);
 
-// Helper function to generate a consistent private chat room ID
-// Ensures that DM between User A and User B always has the same room ID (e.g., "1-2" not "2-1")
-function getPrivateChatRoomId(user1Id, user2Id) {
-  const sortedIds = [user1Id, user2Id].sort();
-  return `${sortedIds[0]}-${sortedIds[1]}`;
-}
-
 // Endpoint to fetch chat history for a room (optional, primarily for initial load)
 app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
   const { roomId } = req.params;
@@ -163,23 +179,9 @@ app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
 
     const [messages] = await db.query(query, params);
     const formattedMessages = messages.map((msg) => {
-      let parsedReactions = [];
-      if (msg.reactions) {
-        try {
-          parsedReactions = JSON.parse(msg.reactions);
-        } catch (e) {
-          console.error(
-            `Error parsing reactions for message ID ${msg.message_id}:`,
-            e.message,
-            `Raw reactions: ${msg.reactions}`
-          );
-          // Fallback to empty array if parsing fails
-          parsedReactions = [];
-        }
-      }
       return {
         ...msg,
-        reactions: parsedReactions,
+        reactions: parseReactionsSafely(msg.reactions, msg.message_id), // Use the helper function here
         file_data: msg.file_data || null,
         file_name: msg.file_name || null,
         file_type: msg.file_type || null,
@@ -192,6 +194,38 @@ app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
   }
 });
 
+// Helper function to generate a consistent private chat room ID
+// Ensures that DM between User A and User B always has the same room ID (e.g., "1-2" not "2-1")
+function getPrivateChatRoomId(user1Id, user2Id) {
+  const sortedIds = [user1Id, user2Id].sort();
+  return `${sortedIds[0]}-${sortedIds[1]}`;
+}
+
+// Helper function for robust JSON parsing of reactions
+function parseReactionsSafely(reactionsString, messageId = "unknown") {
+  if (
+    typeof reactionsString === "string" &&
+    reactionsString.trim().length > 0 &&
+    reactionsString !== "[object Object]"
+  ) {
+    try {
+      return JSON.parse(reactionsString);
+    } catch (e) {
+      console.error(
+        `Error parsing reactions for message ID ${messageId}: ${e.message}. Raw reactions: '${reactionsString}'`
+      );
+      // Fallback to empty array if parsing fails
+      return [];
+    }
+  } else if (reactionsString === "[object Object]") {
+    // Handle the case where "[object Object]" string was stored
+    console.warn(
+      `Malformed reaction data "[object Object]" found for message ID ${messageId}. Initializing reactions to empty.`
+    );
+    return [];
+  }
+  return []; // Default for null, undefined, empty string, or non-string types
+}
 // ==============================================
 // Socket.IO event handling
 // ==============================================
@@ -258,23 +292,9 @@ io.on("connection", (socket) => {
       const [messages] = await db.query(query, params);
 
       const formattedMessages = messages.map((msg) => {
-        let parsedReactions = [];
-        if (msg.reactions) {
-          try {
-            parsedReactions = JSON.parse(msg.reactions);
-          } catch (e) {
-            console.error(
-              `Error parsing reactions for message ID ${msg.message_id}:`,
-              e.message,
-              `Raw reactions: ${msg.reactions}`
-            );
-            // Fallback to empty array if parsing fails
-            parsedReactions = [];
-          }
-        }
         return {
           ...msg,
-          reactions: parsedReactions,
+          reactions: parseReactionsSafely(msg.reactions, msg.message_id), // Use the helper function here
           file_data: msg.file_data || null,
           file_name: msg.file_name || null,
           file_type: msg.file_type || null,
@@ -381,7 +401,7 @@ io.on("connection", (socket) => {
         created_at: now.toISOString(),
         edited_at: null,
         is_deleted: false,
-        reactions: [],
+        reactions: [], // Always initialize to an empty array for new messages
         file_data: file_data || null,
         file_name: file_name || null,
         file_type: file_type || null,
@@ -480,22 +500,10 @@ io.on("connection", (socket) => {
 
       const updatedMessage = {
         ...updatedMsgRows[0],
-        // MODIFIED: Added check for reactions.length > 0
-        reactions:
-          updatedMsgRows[0].reactions && updatedMsgRows[0].reactions.length > 0
-            ? (() => {
-                try {
-                  return JSON.parse(updatedMsgRows[0].reactions);
-                } catch (e) {
-                  console.error(
-                    `Error parsing reactions for message ID ${updatedMsgRows[0].message_id}:`,
-                    e.message,
-                    `Raw reactions: ${updatedMsgRows[0].reactions}`
-                  );
-                  return [];
-                }
-              })()
-            : [],
+        reactions: parseReactionsSafely(
+          updatedMsgRows[0].reactions,
+          updatedMsgRows[0].message_id
+        ), // Use the helper function here
         file_data: updatedMsgRows[0].file_data || null,
         file_name: updatedMsgRows[0].file_name || null,
         file_type: updatedMsgRows[0].file_type || null,
@@ -552,22 +560,10 @@ io.on("connection", (socket) => {
 
       const updatedMessage = {
         ...updatedMsgRows[0],
-        // MODIFIED: Added check for reactions.length > 0
-        reactions:
-          updatedMsgRows[0].reactions && updatedMsgRows[0].reactions.length > 0
-            ? (() => {
-                try {
-                  return JSON.parse(updatedMsgRows[0].reactions);
-                } catch (e) {
-                  console.error(
-                    `Error parsing reactions for message ID ${updatedMsgRows[0].message_id}:`,
-                    e.message,
-                    `Raw reactions: ${updatedMsgRows[0].reactions}`
-                  );
-                  return [];
-                }
-              })()
-            : [],
+        reactions: parseReactionsSafely(
+          updatedMsgRows[0].reactions,
+          updatedMsgRows[0].message_id
+        ), // Use the helper function here
         file_data: updatedMsgRows[0].file_data || null,
         file_name: updatedMsgRows[0].file_name || null,
         file_type: updatedMsgRows[0].file_type || null,
@@ -604,49 +600,36 @@ io.on("connection", (socket) => {
         "SELECT reactions, file_data, file_name, file_type, message_type, room_id, recipient_id, is_deleted FROM chat_messages WHERE message_id = ?",
         [messageId]
       );
+
       if (messages.length === 0) {
         socket.emit("error", "Message not found for reaction.");
         return;
       }
-      if (messages[0].is_deleted) {
+
+      const message = messages[0];
+      if (message.is_deleted) {
         socket.emit("error", "Cannot react to a deleted message.");
         return;
       }
 
-      // MODIFIED: Added check for messages[0].reactions.length > 0
-      let currentReactions =
-        messages[0]?.reactions && messages[0].reactions.length > 0
-          ? (() => {
-              try {
-                return JSON.parse(messages[0].reactions);
-              } catch (e) {
-                console.error(
-                  `Error parsing reactions for message ID ${messages[0].message_id}:`,
-                  e.message,
-                  `Raw reactions: ${messages[0].reactions}`
-                );
-                return [];
-              }
-            })()
-          : [];
+      // --- START: MODIFIED SECTION FOR REACT_MESSAGE ---
+      let currentReactions = parseReactionsSafely(message.reactions, messageId);
+      // --- END: MODIFIED SECTION FOR REACT_MESSAGE ---
 
-      const existingReactionIndex = currentReactions.findIndex(
+      const reactionIndex = currentReactions.findIndex(
         (r) => r.emoji === emoji
       );
-
-      if (existingReactionIndex !== -1) {
-        const reaction = currentReactions[existingReactionIndex];
-        const userIndex = reaction.userIds.indexOf(userId);
-
-        if (userIndex !== -1) {
-          reaction.userIds.splice(userIndex, 1);
-          reaction.usernames.splice(userIndex, 1);
-          if (reaction.userIds.length === 0) {
-            currentReactions.splice(existingReactionIndex, 1);
+      if (reactionIndex !== -1) {
+        const userIdx = currentReactions[reactionIndex].userIds.indexOf(userId);
+        if (userIdx !== -1) {
+          currentReactions[reactionIndex].userIds.splice(userIdx, 1);
+          currentReactions[reactionIndex].usernames.splice(userIdx, 1);
+          if (currentReactions[reactionIndex].userIds.length === 0) {
+            currentReactions.splice(reactionIndex, 1);
           }
         } else {
-          reaction.userIds.push(userId);
-          reaction.usernames.push(username);
+          currentReactions[reactionIndex].userIds.push(userId);
+          currentReactions[reactionIndex].usernames.push(username);
         }
       } else {
         currentReactions.push({
@@ -661,56 +644,27 @@ io.on("connection", (socket) => {
         [JSON.stringify(currentReactions), messageId]
       );
 
-      const [updatedMsgRows] = await db.query(
-        `SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
-           FROM chat_messages
-           WHERE message_id = ?`,
-        [messageId]
-      );
-
       const updatedMessage = {
-        ...updatedMsgRows[0],
-        // MODIFIED: Added check for updatedMsgRows[0].reactions.length > 0
-        reactions:
-          updatedMsgRows[0].reactions && updatedMsgRows[0].reactions.length > 0
-            ? (() => {
-                try {
-                  return JSON.parse(updatedMsgRows[0].reactions);
-                } catch (e) {
-                  console.error(
-                    `Error parsing reactions for message ID ${updatedMsgRows[0].message_id}:`,
-                    e.message,
-                    `Raw reactions: ${updatedMsgRows[0].reactions}`
-                  );
-                  return [];
-                }
-              })()
-            : [],
-        file_data: updatedMsgRows[0].file_data || null,
-        file_name: updatedMsgRows[0].file_name || null,
-        file_type: updatedMsgRows[0].file_type || null,
+        ...message,
+        reactions: currentReactions, // Send the parsed object to the client
       };
 
-      // Determine the room to emit to
       const roomToEmit =
-        updatedMessage.message_type === "private" && updatedMessage.recipient_id
-          ? getPrivateChatRoomId(
-              messages[0].user_id, // Original sender (assuming messages[0] is the original message)
-              messages[0].recipient_id // Original recipient
-            )
-          : updatedMessage.room_id; // For public, use original room_id
+        message.message_type === "private" && message.recipient_id
+          ? getPrivateChatRoomId(userId, message.recipient_id)
+          : message.room_id;
 
       io.to(roomToEmit).emit("message_updated", updatedMessage);
       console.log(
-        `Broadcasted updated message ${messageId} with new reactions.`
+        `Reaction '${emoji}' processed for message ${messageId} by user ${userId}`
       );
 
       if (activeUsers[userId]) {
         activeUsers[userId].lastActivity = Date.now();
       }
     } catch (error) {
-      console.error("Error handling reaction:", error);
-      socket.emit("error", "Failed to process reaction.");
+      console.error("Error reacting to message:", error);
+      socket.emit("error", "Failed to react to message.");
     }
   });
 

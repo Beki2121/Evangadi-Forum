@@ -3,7 +3,10 @@ import { createContext, useEffect, useState } from "react";
 import "./App.css";
 import { axiosInstance } from "./utility/axios";
 import AppRouter from "./routes/AppRouter.jsx";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
+<ToastContainer position="top-right" autoClose={3000} />;
 export const UserState = createContext();
 
 function App() {

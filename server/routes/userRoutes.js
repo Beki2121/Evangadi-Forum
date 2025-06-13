@@ -1,35 +1,41 @@
 const express = require("express");
 const router = express.Router();
+
 const {
   register,
   login,
   check,
   getUserProfileById,
   updateUserProfile,
-  getAllUsers, // Ensure getAllUsers is imported here
-} = require("../controller/userController.js"); // Make sure this path is correct relative to userRoutes.js
-const authMiddleware = require("../middleware/authMiddleware.js"); // Make sure this path is correct
+  getAllUsers,
+  forgotPassword,
+  resetPassword,
+} = require("../controller/userController.js");
 
-// Route for user registration
+const authMiddleware = require("../middleware/authMiddleware.js");
+
+// Register a new user
 router.post("/register", register);
 
-// Route for user login
+// Login user
 router.post("/login", login);
 
-// Route to check user authentication status (requires authMiddleware)
+// Forgot password route (send reset link)
+router.post("/forgot-password", forgotPassword);
+
+// Reset password route (uses token in URL)
+router.post("/reset-password/:token", resetPassword);
+
+// Check user authentication status (protected)
 router.get("/check", authMiddleware, check);
 
-// Route to get a user's profile by their ID (public access, can be protected)
+// Get user profile by user ID (public or protected)
 router.get("/:userid", getUserProfileById);
 
-// Route to update a user's profile by their ID (requires authentication)
+// Update user profile by user ID (protected)
 router.put("/:userid", authMiddleware, updateUserProfile);
 
-// --- IMPORTANT FIX START ---
-// NEW ROUTE: Get all registered users (requires authentication to access)
-// This route is at the root of the path where userRoutes is mounted.
-// If app.js uses app.use("/api/v1/user", userRoutes), then this route becomes /api/v1/user/
+// Get all users (protected)
 router.get("/", authMiddleware, getAllUsers);
-// --- IMPORTANT FIX END ---
 
 module.exports = router;

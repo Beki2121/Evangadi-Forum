@@ -14,7 +14,7 @@ import {
   FiPaperclip, // Using FiPaperclip for attachment button
 } from "react-icons/fi"; // Added more icons
 import EmojiPicker from "emoji-picker-react";
-import Loader from "../Loader/Loader.jsx"; // Assuming you have a loader component
+import Loader from "../../components/Loader/Loader.jsx"; // Assuming you have a loader component
 import Swal from "sweetalert2"; // For confirmations
 
 const SOCKET_SERVER_URL = "http://localhost:5000"; // IMPORTANT: Ensure your Socket.IO server is running on this URL

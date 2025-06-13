@@ -133,7 +133,7 @@ function Login({ onSwitch }) {
             </button>
           </div>
           <p className={classes.forgotpasswordtext}>
-            <Link to="/forgetPass">Forgot password?</Link>
+            <Link to="/forgot-password">Forgot password?</Link>
           </p>
           <button type="submit" className={classes.submitbtn}>
             Login
