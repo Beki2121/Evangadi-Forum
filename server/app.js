@@ -2,12 +2,24 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
-const db = require("./config/dbConfig");
-const initializeDatabase = require("./config/TableSchema");
-const authMiddleware = require("./middleware/authMiddleware");
+const db = require("./config/dbConfig"); // Assuming dbConfig provides your database connection
+const initializeDatabase = require("./config/TableSchema"); // Assuming this sets up your tables
+const authMiddleware = require("./middleware/authMiddleware"); // Your existing middleware
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173", // Your frontend URL
+    methods: ["GET", "POST"],
+  },
+});
+
+app.use(cors({ origin: "http://localhost:5173" }));
+app.use(express.json({ limit: "50mb" })); // Increased limit for larger file/voice data
+
 // Public route
 app.get("/", (req, res) => {
   res.send("Hello, world! This is a public route.");
@@ -33,15 +45,6 @@ app.get("/protected", authMiddleware, (req, res) => {
     user: req.user,
   });
 });
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:5173", // Your frontend URL
-    methods: ["GET", "POST"],
-  },
-});
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json());
 
 (async () => {
   try {
@@ -57,7 +60,7 @@ app.use(express.json());
 // In-memory store for currently active users (based on connection AND activity)
 const activeUsers = {}; // { userId: { userId, username, avatar_url, sid, lastActivity, currentRoomId } }
 const ACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
-let lastKnownActiveUsersCount = 0;
+let lastKnownActiveUsersCount = 0; // Tracks the count for broadcasting updates
 
 // Define the public chat room ID
 const PUBLIC_CHAT_ROOM_ID = "stackoverflow_lobby";
@@ -161,7 +164,7 @@ app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
     if (type === "private" && targetUserId) {
       const dmRoomId = getPrivateChatRoomId(userId, targetUserId);
       query = `
-        SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
         FROM chat_messages
         WHERE room_id = ? AND message_type = 'private'
         ORDER BY created_at ASC LIMIT 200;
@@ -170,7 +173,7 @@ app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
     } else {
       // Default to public if type is not private or targetUserId is missing
       query = `
-        SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
         FROM chat_messages
         WHERE room_id = ? AND message_type = 'public'
         ORDER BY created_at ASC LIMIT 200;`;
@@ -181,10 +184,13 @@ app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
     const formattedMessages = messages.map((msg) => {
       return {
         ...msg,
-        reactions: parseReactionsSafely(msg.reactions, msg.message_id), // Use the helper function here
+        reactions: parseReactionsSafely(msg.reactions, msg.message_id),
         file_data: msg.file_data || null,
         file_name: msg.file_name || null,
         file_type: msg.file_type || null,
+        audio_data: msg.audio_data || null,
+        audio_type: msg.audio_type || null,
+        audio_duration: msg.audio_duration || null,
       };
     });
     res.status(200).json(formattedMessages);
@@ -233,34 +239,58 @@ function parseReactionsSafely(reactionsString, messageId = "unknown") {
 io.on("connection", (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
-  // Emitted by frontend when a user joins the chat
-  socket.on("join_room", (roomId) => {
-    socket.join(roomId);
-    console.log(`Socket ${socket.id} joined room: ${roomId}`);
-    // Update user's current room tracking in activeUsers if available
-    for (const userId in activeUsers) {
-      if (activeUsers[userId].sid === socket.id) {
-        activeUsers[userId].currentRoomId = roomId;
-        console.log(
-          `User ${activeUsers[userId].username} (ID: ${userId}) updated to room ${roomId}`
-        );
-        break;
-      }
-    }
-    // Broadcast updated online users as their room status might change (though not explicitly displayed in public chat)
+  // Retrieve user info from handshake query
+  const userId = socket.handshake.query.userId;
+  const username = socket.handshake.query.username;
+  const avatar_url = socket.handshake.query.avatar_url; // Assuming avatar_url is passed
+
+  if (userId && username) {
+    activeUsers[userId] = {
+      userId: userId,
+      username: username,
+      avatar_url: avatar_url, // Store avatar URL
+      sid: socket.id,
+      lastActivity: Date.now(),
+      currentRoomId: PUBLIC_CHAT_ROOM_ID, // Default to public room
+    };
+    // Initially broadcast all online users to the new client and existing clients
     io.emit(
-      "online_users",
+      "onlineUsers", // Consistent with frontend
       Object.values(activeUsers).map((u) => ({
         userId: u.userId,
         username: u.username,
         avatar_url: u.avatar_url,
       }))
     );
+    console.log(`User ${username} (ID: ${userId}) connected via socket.`);
+  }
+
+  // Emitted by frontend when a user joins a specific chat room
+  socket.on("joinRoom", ({ roomId, userId, username }) => {
+    socket.join(roomId);
+    console.log(
+      `Socket ${socket.id} (User: ${username}, Room: ${roomId}) joined.`
+    );
+    // Update user's current room tracking
+    if (activeUsers[userId]) {
+      activeUsers[userId].currentRoomId = roomId;
+      activeUsers[userId].lastActivity = Date.now();
+    }
+    // No need to emit onlineUsers here again, as it's done on connect/activity
+  });
+
+  // Emitted by frontend when a user leaves a room (e.g., switching from DM to public)
+  socket.on("leaveRoom", ({ roomId, userId }) => {
+    socket.leave(roomId);
+    console.log(`Socket ${socket.id} (User: ${userId}, Room: ${roomId}) left.`);
+    if (activeUsers[userId]) {
+      activeUsers[userId].lastActivity = Date.now(); // Still active, just changed room
+    }
   });
 
   // Emitted by frontend to fetch chat history (both public and private)
-  socket.on("fetch_chat_history", async (data) => {
-    const { userId, targetUserId } = data; // userId is the current logged-in user's ID
+  socket.on("fetchChatHistory", async (data) => {
+    const { userId, roomId, targetUserId } = data; // userId is the current logged-in user's ID
     let query;
     let params;
 
@@ -268,7 +298,7 @@ io.on("connection", (socket) => {
       // It's a private chat
       const dmRoomId = getPrivateChatRoomId(userId, targetUserId);
       query = `
-        SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
         FROM chat_messages
         WHERE room_id = ? AND message_type = 'private'
         ORDER BY created_at ASC LIMIT 200;
@@ -277,9 +307,8 @@ io.on("connection", (socket) => {
       console.log(`Fetching private chat history for room: ${dmRoomId}`);
     } else {
       // It's a public chat
-      const roomId = PUBLIC_CHAT_ROOM_ID; // Ensure public room ID is used
       query = `
-        SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
         FROM chat_messages
         WHERE room_id = ? AND message_type = 'public'
         ORDER BY created_at ASC LIMIT 200;
@@ -294,15 +323,18 @@ io.on("connection", (socket) => {
       const formattedMessages = messages.map((msg) => {
         return {
           ...msg,
-          reactions: parseReactionsSafely(msg.reactions, msg.message_id), // Use the helper function here
+          reactions: parseReactionsSafely(msg.reactions, msg.message_id),
           file_data: msg.file_data || null,
           file_name: msg.file_name || null,
           file_type: msg.file_type || null,
+          audio_data: msg.audio_data || null,
+          audio_type: msg.audio_type || null,
+          audio_duration: msg.audio_duration || null,
         };
       });
-      socket.emit("chat_history", formattedMessages);
+      socket.emit("chatHistory", formattedMessages); // Emitting to specific socket
       console.log(
-        `Socket ${socket.id}: Sent chat history for User ${userId} (Target: ${
+        `Socket ${socket.id}: Sent chat history for Room ${roomId} (Target: ${
           targetUserId || "public"
         })`
       );
@@ -312,48 +344,77 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ==========================================================
-  // Active User Tracking Logic
-  // ==========================================================
+  // Handle regular text messages
+  socket.on("sendMessage", async (msg) => {
+    const {
+      message_text,
+      user_id,
+      username,
+      avatar_url,
+      room_id,
+      message_type,
+      recipient_id,
+    } = msg;
 
-  // Registers a user as online and updates their activity timestamp
-  socket.on("user_online", async (data) => {
-    const userId = data.userId;
-    if (userId) {
-      activeUsers[userId] = {
-        userId: userId,
-        username: data.username || "Anonymous",
-        avatar_url: data.avatar_url,
-        sid: socket.id, // Store session ID to associate with disconnects
-        lastActivity: Date.now(), // Set initial activity timestamp
-        currentRoomId: PUBLIC_CHAT_ROOM_ID, // Assume public lobby on initial connect
+    try {
+      const now = new Date();
+      const reactionsJson = JSON.stringify([]); // New messages start with empty reactions
+      const insertQuery = `
+          INSERT INTO chat_messages (user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, reactions)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+        `;
+      const [result] = await db.query(insertQuery, [
+        user_id,
+        username,
+        avatar_url,
+        message_text,
+        room_id,
+        message_type,
+        recipient_id,
+        now,
+        reactionsJson,
+      ]);
+
+      const newMessage = {
+        message_id: result.insertId,
+        user_id,
+        username,
+        avatar_url,
+        message_text,
+        room_id,
+        message_type,
+        recipient_id,
+        created_at: now.toISOString(),
+        edited_at: null,
+        is_deleted: false,
+        reactions: [],
+        file_data: null, // Ensure these are null for text messages
+        file_name: null,
+        file_type: null,
+        audio_data: null, // Ensure these are null for text messages
+        audio_type: null,
+        audio_duration: null,
       };
-      console.log(
-        `User ${activeUsers[userId].username} (ID: ${userId}) marked online/active. SID: ${socket.id}`
-      );
-      // Broadcast the updated list of active users to all clients immediately
-      io.emit(
-        "online_users",
-        Object.values(activeUsers).map((u) => ({
-          userId: u.userId,
-          username: u.username,
-          avatar_url: u.avatar_url,
-        }))
-      );
-    } else {
-      console.warn(
-        `Socket ${socket.id}: user_online event received with missing userId.`
-      );
+
+      io.to(room_id).emit("message", newMessage);
+      console.log(`Text message sent to room ${room_id} by ${username}.`);
+      if (activeUsers[user_id]) {
+        activeUsers[user_id].lastActivity = Date.now();
+      }
+    } catch (error) {
+      console.error("Error saving text message:", error);
+      socket.emit("error", "Failed to send text message.");
     }
   });
 
-  // Handles incoming chat messages (public, private, or file)
-  socket.on("chat message", async (msg) => {
+  // Handle file messages
+  socket.on("fileMessage", async (msg) => {
     const {
-      text,
-      userId,
+      message_text, // Can be null
+      user_id,
       username,
       avatar_url,
+      room_id,
       message_type,
       recipient_id,
       file_data,
@@ -361,107 +422,143 @@ io.on("connection", (socket) => {
       file_type,
     } = msg;
 
-    let actualRoomId;
-    if (message_type === "private" && recipient_id) {
-      actualRoomId = getPrivateChatRoomId(userId, recipient_id);
-    } else {
-      actualRoomId = PUBLIC_CHAT_ROOM_ID; // Default to public room
-    }
-
-    const reactionsJson = JSON.stringify([]); // New messages start with empty reactions
-
     try {
       const now = new Date();
+      const reactionsJson = JSON.stringify([]);
       const insertQuery = `
-          INSERT INTO chat_messages (user_id, username, message_text, room_id, message_type, recipient_id, created_at, reactions, file_data, file_name, file_type)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          INSERT INTO chat_messages (user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, reactions, file_data, file_name, file_type)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `;
       const [result] = await db.query(insertQuery, [
-        userId,
+        user_id,
         username,
-        text,
-        actualRoomId, // Use the derived actualRoomId
-        message_type || "public",
-        recipient_id || null,
+        avatar_url,
+        message_text, // Can be null if only file
+        room_id,
+        message_type,
+        recipient_id,
         now,
         reactionsJson,
-        file_data || null,
-        file_name || null,
-        file_type || null,
+        file_data,
+        file_name,
+        file_type,
       ]);
-      const messageId = result.insertId;
+
       const newMessage = {
-        message_id: messageId,
-        user_id: userId,
-        username: username,
-        message_text: text,
-        room_id: actualRoomId, // Use the derived actualRoomId
-        message_type: message_type || "public",
-        recipient_id: recipient_id || null,
+        message_id: result.insertId,
+        user_id,
+        username,
+        avatar_url,
+        message_text,
+        room_id,
+        message_type,
+        recipient_id,
         created_at: now.toISOString(),
         edited_at: null,
         is_deleted: false,
-        reactions: [], // Always initialize to an empty array for new messages
-        file_data: file_data || null,
-        file_name: file_name || null,
-        file_type: file_type || null,
+        reactions: [],
+        file_data,
+        file_name,
+        file_type,
+        audio_data: null, // Ensure null for file messages
+        audio_type: null,
+        audio_duration: null,
       };
 
-      // Update lastActivity for the user who sent the message
-      if (activeUsers[userId]) {
-        activeUsers[userId].lastActivity = Date.now();
-      } else {
-        activeUsers[userId] = {
-          userId: userId,
-          username: username || "Anonymous",
-          avatar_url: avatar_url,
-          sid: socket.id,
-          lastActivity: Date.now(),
-          currentRoomId: actualRoomId, // Set their current room
-        };
+      io.to(room_id).emit("message", newMessage);
+      console.log(`File message sent to room ${room_id} by ${username}.`);
+      if (activeUsers[user_id]) {
+        activeUsers[user_id].lastActivity = Date.now();
       }
-      console.log(
-        `User ${username} (ID: ${userId}) activity updated after sending message.`
-      );
-
-      // Emit the new message to relevant clients
-      if (newMessage.message_type === "private" && newMessage.recipient_id) {
-        // For private messages, ensure both sender and recipient are joined to the actualRoomId
-        // and emit to that specific room.
-        // It's crucial that both sender and recipient join this `actualRoomId` on the frontend
-        // when initiating or switching to a private chat.
-        io.to(actualRoomId).emit("message", newMessage);
-        console.log(
-          `Private message sent from ${username} to ${newMessage.recipient_id}. Room: ${actualRoomId}`
-        );
-      } else {
-        io.to(actualRoomId).emit("message", newMessage); // For public chat or if recipient_id is null/missing
-        console.log(`Public message sent to ${actualRoomId}.`);
-      }
-
-      // Broadcast the updated list of active users to all clients immediately
-      io.emit(
-        "online_users",
-        Object.values(activeUsers).map((u) => ({
-          userId: u.userId,
-          username: u.username,
-          avatar_url: u.avatar_url,
-        }))
-      );
     } catch (error) {
-      console.error("Error saving chat message:", error);
-      socket.emit("error", "Failed to send message: " + error.message);
+      console.error("Error saving file message:", error);
+      socket.emit("error", "Failed to send file message.");
+    }
+  });
+
+  socket.on("voiceMessage", async (msg) => {
+    // <--- The incoming data is 'msg'
+    console.log("Received voice message:", {
+      userId: msg.user_id, // <--- CHANGE THIS FROM data.userid to msg.user_id
+      roomId: msg.room_id, // <--- CHANGE THIS FROM data.room_id to msg.room_id
+      audioType: msg.audio_type, // <--- CHANGE THIS FROM data.audio_type to msg.audio_type
+      audioDataLength: msg.audio_data ? msg.audio_data.length : 0, // <--- CHANGE THIS
+      audioDuration: msg.audio_duration, // <--- CHANGE THIS
+    });
+    const {
+      user_id,
+      username,
+      avatar_url,
+      room_id,
+      message_type,
+      recipient_id,
+      audio_data, // Base64 string of the audio
+      audio_type, // MIME type of the audio (e.g., 'audio/webm')
+      audio_duration, // Duration in seconds
+    } = msg; // This destructures properties from 'msg'
+
+    try {
+      const now = new Date();
+      const reactionsJson = JSON.stringify([]);
+      const insertQuery = `
+            INSERT INTO chat_messages (user_id, username, avatar_url, room_id, message_type, recipient_id, created_at, reactions, audio_data, audio_type, audio_duration)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          `;
+      const [result] = await db.query(insertQuery, [
+        user_id,
+        username,
+        avatar_url,
+        room_id,
+        message_type,
+        recipient_id,
+        now,
+        reactionsJson,
+        audio_data,
+        audio_type,
+        audio_duration,
+      ]);
+
+      const newMessage = {
+        message_id: result.insertId,
+        user_id,
+        username,
+        avatar_url,
+        message_text: null, // Voice messages don't have text directly
+        room_id,
+        message_type,
+        recipient_id,
+        created_at: now.toISOString(),
+        edited_at: null,
+        is_deleted: false,
+        reactions: [],
+        file_data: null,
+        file_name: null,
+        file_type: null,
+        audio_data, // Include audio data
+        audio_type,
+        audio_duration,
+      };
+
+      io.to(room_id).emit("message", newMessage);
+      console.log(
+        `Voice message sent to room ${room_id} by ${username}. Duration: ${audio_duration}s`
+      );
+      if (activeUsers[user_id]) {
+        activeUsers[user_id].lastActivity = Date.now();
+      }
+    } catch (error) {
+      console.error("Error saving voice message:", error);
+      socket.emit("error", "Failed to send voice message.");
     }
   });
 
   // Handle message editing
-  socket.on("edit_message", async (data) => {
-    const { messageId, newText, userId, file_data, file_name, file_type } =
-      data;
+  socket.on("editMessage", async (data) => {
+    const { message_id, new_text, userId } = data;
     try {
       const [originalMsgRows] = await db.query(
-        "SELECT user_id, is_deleted, message_type, room_id, recipient_id FROM chat_messages WHERE message_id = ?",
-        [messageId]
+        "SELECT user_id, is_deleted, message_type, room_id, recipient_id, file_data, file_type, audio_data, audio_type FROM chat_messages WHERE message_id = ?",
+        [message_id]
       );
       if (originalMsgRows.length === 0) {
         socket.emit("error", "Message not found.");
@@ -477,25 +574,26 @@ io.on("connection", (socket) => {
         socket.emit("error", "Cannot edit a deleted message.");
         return;
       }
+      // Prevent editing if it's a file or audio message (only text can be edited)
+      if (originalMessage.file_data || originalMessage.audio_data) {
+        socket.emit(
+          "error",
+          "Cannot edit file or voice messages. Only text content can be edited."
+        );
+        return;
+      }
 
       const now = new Date();
       await db.query(
-        "UPDATE chat_messages SET message_text = ?, edited_at = ?, file_data = ?, file_name = ?, file_type = ? WHERE message_id = ?",
-        [
-          newText,
-          now,
-          file_data || null,
-          file_name || null,
-          file_type || null,
-          messageId,
-        ]
+        "UPDATE chat_messages SET message_text = ?, edited_at = ? WHERE message_id = ?",
+        [new_text, now, message_id]
       );
 
       const [updatedMsgRows] = await db.query(
-        `SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        `SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
            FROM chat_messages
            WHERE message_id = ?`,
-        [messageId]
+        [message_id]
       );
 
       const updatedMessage = {
@@ -503,20 +601,22 @@ io.on("connection", (socket) => {
         reactions: parseReactionsSafely(
           updatedMsgRows[0].reactions,
           updatedMsgRows[0].message_id
-        ), // Use the helper function here
+        ),
         file_data: updatedMsgRows[0].file_data || null,
         file_name: updatedMsgRows[0].file_name || null,
         file_type: updatedMsgRows[0].file_type || null,
+        audio_data: updatedMsgRows[0].audio_data || null,
+        audio_type: updatedMsgRows[0].audio_type || null,
+        audio_duration: updatedMsgRows[0].audio_duration || null,
       };
 
-      // Determine the room to emit to
       const roomToEmit =
         updatedMessage.message_type === "private" && updatedMessage.recipient_id
           ? getPrivateChatRoomId(userId, updatedMessage.recipient_id)
-          : updatedMessage.room_id; // For public, use original room_id
+          : updatedMessage.room_id;
 
-      io.to(roomToEmit).emit("message_updated", updatedMessage);
-      console.log(`Message ${messageId} edited by user ${userId}.`);
+      io.to(roomToEmit).emit("messageUpdated", updatedMessage);
+      console.log(`Message ${message_id} edited by user ${userId}.`);
 
       if (activeUsers[userId]) {
         activeUsers[userId].lastActivity = Date.now();
@@ -528,12 +628,12 @@ io.on("connection", (socket) => {
   });
 
   // Handle message deletion
-  socket.on("delete_message", async (data) => {
-    const { messageId, userId } = data;
+  socket.on("deleteMessage", async (data) => {
+    const { message_id, userId } = data;
     try {
       const [originalMsgRows] = await db.query(
         "SELECT user_id, message_type, room_id, recipient_id FROM chat_messages WHERE message_id = ?",
-        [messageId]
+        [message_id]
       );
       if (originalMsgRows.length === 0) {
         socket.emit("error", "Message not found.");
@@ -547,15 +647,15 @@ io.on("connection", (socket) => {
       }
 
       await db.query(
-        "UPDATE chat_messages SET is_deleted = TRUE, message_text = 'This message has been deleted.', file_data = NULL, file_name = NULL, file_type = NULL, reactions = '[]' WHERE message_id = ?",
-        [messageId]
+        "UPDATE chat_messages SET is_deleted = TRUE, message_text = 'This message has been deleted.', file_data = NULL, file_name = NULL, file_type = NULL, audio_data = NULL, audio_type = NULL, audio_duration = NULL, reactions = '[]' WHERE message_id = ?",
+        [message_id]
       );
 
       const [updatedMsgRows] = await db.query(
-        `SELECT message_id, user_id, username, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type
+        `SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
            FROM chat_messages
            WHERE message_id = ?`,
-        [messageId]
+        [message_id]
       );
 
       const updatedMessage = {
@@ -563,20 +663,22 @@ io.on("connection", (socket) => {
         reactions: parseReactionsSafely(
           updatedMsgRows[0].reactions,
           updatedMsgRows[0].message_id
-        ), // Use the helper function here
+        ),
         file_data: updatedMsgRows[0].file_data || null,
         file_name: updatedMsgRows[0].file_name || null,
         file_type: updatedMsgRows[0].file_type || null,
+        audio_data: updatedMsgRows[0].audio_data || null,
+        audio_type: updatedMsgRows[0].audio_type || null,
+        audio_duration: updatedMsgRows[0].audio_duration || null,
       };
 
-      // Determine the room to emit to
       const roomToEmit =
         updatedMessage.message_type === "private" && updatedMessage.recipient_id
           ? getPrivateChatRoomId(userId, updatedMessage.recipient_id)
           : updatedMessage.room_id;
 
-      io.to(roomToEmit).emit("message_updated", updatedMessage);
-      console.log(`Message ${messageId} deleted by user ${userId}.`);
+      io.to(roomToEmit).emit("messageUpdated", updatedMessage);
+      console.log(`Message ${message_id} deleted by user ${userId}.`);
 
       if (activeUsers[userId]) {
         activeUsers[userId].lastActivity = Date.now();
@@ -588,17 +690,17 @@ io.on("connection", (socket) => {
   });
 
   // Handles message reactions
-  socket.on("react_message", async (data) => {
-    const { messageId, userId, username, emoji } = data;
-    if (!messageId || !userId || !username || !emoji) {
+  socket.on("reactToMessage", async (data) => {
+    const { message_id, userId, username, emoji } = data;
+    if (!message_id || !userId || !username || !emoji) {
       console.warn("Invalid reaction data:", data);
       return;
     }
 
     try {
       const [messages] = await db.query(
-        "SELECT reactions, file_data, file_name, file_type, message_type, room_id, recipient_id, is_deleted FROM chat_messages WHERE message_id = ?",
-        [messageId]
+        "SELECT reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration, message_type, room_id, recipient_id, is_deleted FROM chat_messages WHERE message_id = ?",
+        [message_id]
       );
 
       if (messages.length === 0) {
@@ -612,9 +714,10 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // --- START: MODIFIED SECTION FOR REACT_MESSAGE ---
-      let currentReactions = parseReactionsSafely(message.reactions, messageId);
-      // --- END: MODIFIED SECTION FOR REACT_MESSAGE ---
+      let currentReactions = parseReactionsSafely(
+        message.reactions,
+        message_id
+      );
 
       const reactionIndex = currentReactions.findIndex(
         (r) => r.emoji === emoji
@@ -622,16 +725,20 @@ io.on("connection", (socket) => {
       if (reactionIndex !== -1) {
         const userIdx = currentReactions[reactionIndex].userIds.indexOf(userId);
         if (userIdx !== -1) {
+          // User already reacted with this emoji, so remove their reaction
           currentReactions[reactionIndex].userIds.splice(userIdx, 1);
           currentReactions[reactionIndex].usernames.splice(userIdx, 1);
           if (currentReactions[reactionIndex].userIds.length === 0) {
+            // If no users left for this emoji, remove the emoji reaction entry
             currentReactions.splice(reactionIndex, 1);
           }
         } else {
+          // User reacted with a new emoji, add their reaction
           currentReactions[reactionIndex].userIds.push(userId);
           currentReactions[reactionIndex].usernames.push(username);
         }
       } else {
+        // New emoji reaction
         currentReactions.push({
           emoji: emoji,
           userIds: [userId],
@@ -641,12 +748,19 @@ io.on("connection", (socket) => {
 
       await db.query(
         "UPDATE chat_messages SET reactions = ? WHERE message_id = ?",
-        [JSON.stringify(currentReactions), messageId]
+        [JSON.stringify(currentReactions), message_id]
       );
 
       const updatedMessage = {
-        ...message,
-        reactions: currentReactions, // Send the parsed object to the client
+        ...message, // Keep all other message properties
+        reactions: currentReactions, // Send the updated parsed object to the client
+        // Ensure file/audio data are also passed through
+        file_data: message.file_data || null,
+        file_name: message.file_name || null,
+        file_type: message.file_type || null,
+        audio_data: message.audio_data || null,
+        audio_type: message.audio_type || null,
+        audio_duration: message.audio_duration || null,
       };
 
       const roomToEmit =
@@ -654,9 +768,9 @@ io.on("connection", (socket) => {
           ? getPrivateChatRoomId(userId, message.recipient_id)
           : message.room_id;
 
-      io.to(roomToEmit).emit("message_updated", updatedMessage);
+      io.to(roomToEmit).emit("messageUpdated", updatedMessage);
       console.log(
-        `Reaction '${emoji}' processed for message ${messageId} by user ${userId}`
+        `Reaction '${emoji}' processed for message ${message_id} by user ${userId}`
       );
 
       if (activeUsers[userId]) {
@@ -676,20 +790,26 @@ io.on("connection", (socket) => {
         ? getPrivateChatRoomId(data.userId, data.recipient_id)
         : data.roomId || PUBLIC_CHAT_ROOM_ID;
 
-    socket
-      .to(roomToSend)
-      .emit("typing", { userId: data.userId, username: data.username });
+    // Only emit typing if the sender is not the current socket
+    socket.to(roomToSend).emit("typing", {
+      userId: data.userId,
+      username: data.username,
+      roomId: roomToSend,
+    });
     if (activeUsers[data.userId]) {
       activeUsers[data.userId].lastActivity = Date.now();
     }
   });
 
-  socket.on("stop_typing", (data) => {
+  socket.on("stopTyping", (data) => {
     const roomToSend =
       data.message_type === "private" && data.recipient_id
         ? getPrivateChatRoomId(data.userId, data.recipient_id)
         : data.roomId || PUBLIC_CHAT_ROOM_ID;
-    socket.to(roomToSend).emit("stop_typing", { userId: data.userId });
+    socket.to(roomToSend).emit("stopTyping", {
+      userId: data.userId,
+      roomId: roomToSend,
+    });
   });
 
   // Handles client disconnection
@@ -707,8 +827,9 @@ io.on("connection", (socket) => {
       console.log(
         `User ${disconnectedUserId} removed from active users due to disconnect.`
       );
+      // Immediately broadcast updated online users list
       io.emit(
-        "online_users",
+        "onlineUsers", // Consistent with frontend
         Object.values(activeUsers).map((u) => ({
           userId: u.userId,
           username: u.username,
@@ -716,6 +837,19 @@ io.on("connection", (socket) => {
         }))
       );
     }
+  });
+
+  // === Voice/Video Call Related Socket Events (from your original snippet) ===
+  socket.on("voice-offer", ({ offer, to }) => {
+    io.to(to).emit("voice-offer", { offer, from: socket.id });
+  });
+
+  socket.on("voice-answer", ({ answer, to }) => {
+    io.to(to).emit("voice-answer", { answer, from: socket.id });
+  });
+
+  socket.on("voice-candidate", ({ candidate, to }) => {
+    io.to(to).emit("voice-candidate", { candidate, from: socket.id });
   });
 });
 
@@ -744,7 +878,7 @@ setInterval(() => {
       `Broadcasting updated online users after inactivity check. Current count: ${currentActiveUsersCount}`
     );
     io.emit(
-      "online_users",
+      "onlineUsers", // Consistent with frontend
       Object.values(activeUsers).map((u) => ({
         userId: u.userId,
         username: u.username,
@@ -753,7 +887,7 @@ setInterval(() => {
     );
     lastKnownActiveUsersCount = currentActiveUsersCount;
   }
-}, 30 * 1000);
+}, 30 * 1000); // Check every 30 seconds
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

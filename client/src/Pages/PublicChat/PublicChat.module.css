@@ -1037,3 +1037,425 @@ body {
     font-size: 0.75rem;
   }
 }
+/* PublicChat.module.css Additions */
+
+/* Voice Recording & Playback */
+.micButton,
+.stopRecordingButton,
+.cancelRecordingButton {
+  background-color: var(--primary-color); /* Or a distinct color */
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: background-color 0.2s ease-in-out;
+  flex-shrink: 0;
+  margin-right: 8px; /* Space between mic and input */
+}
+
+.micButton:hover,
+.stopRecordingButton:hover,
+.cancelRecordingButton:hover {
+  background-color: var(--primary-dark-color);
+}
+
+.micButton:disabled,
+.stopRecordingButton:disabled,
+.cancelRecordingButton:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.recordingIndicator {
+  display: flex;
+  align-items: center;
+  background-color: #ffe0b2; /* Light orange background */
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 0.9em;
+  gap: 8px;
+  animation: pulse-red 1.5s infinite; /* Red pulsing effect for recording */
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+  }
+}
+
+.recordingIcon {
+  color: red;
+  font-size: 1.2em;
+}
+
+.recordingTimer {
+  font-weight: bold;
+}
+
+.stopRecordingButton,
+.cancelRecordingButton {
+  margin-left: 10px;
+  font-size: 0.9em;
+  border-radius: 5px;
+  width: auto;
+  height: auto;
+  padding: 4px 8px;
+}
+
+.stopRecordingButton {
+  background-color: #dc3545; /* Red */
+}
+.stopRecordingButton:hover {
+  background-color: #c82333;
+}
+.cancelRecordingButton {
+  background-color: #6c757d; /* Gray */
+}
+.cancelRecordingButton:hover {
+  background-color: #5a6268;
+}
+
+.recordedAudioPreview {
+  display: flex;
+  align-items: center;
+  background-color: #e0f7fa; /* Light blue */
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  color: #00796b;
+  font-size: 0.9em;
+  gap: 8px;
+}
+
+.audioFileName {
+  font-weight: 500;
+}
+
+/* Message Bubble Audio */
+.messageAudio {
+  display: flex;
+  align-items: center;
+  padding: 5px 0; /* Add some padding around the audio player */
+  gap: 8px;
+  color: var(--text-color); /* Inherit text color */
+}
+
+.audioControlButton {
+  background: none;
+  border: none;
+  color: var(--primary-color); /* Match theme color */
+  font-size: 1.8em;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.audioControlButton:hover {
+  color: var(--primary-dark-color);
+}
+
+.audioIcon {
+  /* No specific styling needed, controlled by parent */
+}
+
+.audioDuration {
+  font-size: 0.8em;
+  color: #666;
+}
+
+/* Ensure other input controls (attach, emoji) are not affected by mic button position */
+.inputFieldWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Consistent spacing */
+}
+
+.emptyButtonPlaceholder {
+  width: 40px; /* Same width as mic button for consistent layout */
+  flex-shrink: 0;
+}
+/* chat-app.css (or your preferred CSS file) */
+
+.chat-app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 800px;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+  overflow: hidden;
+}
+
+.chat-header {
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+.messages-display {
+  flex-grow: 1;
+  padding: 10px;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+}
+
+.message-item {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 15px;
+  max-width: 70%;
+  position: relative; /* For reactions */
+}
+
+.my-message {
+  align-self: flex-end;
+  background-color: #e0f7fa; /* Light blue */
+  border-bottom-right-radius: 2px; /* For speech bubble effect */
+}
+
+.other-message {
+  align-self: flex-start;
+  background-color: #ffffff; /* White */
+  border: 1px solid #eee;
+  border-bottom-left-radius: 2px; /* For speech bubble effect */
+}
+
+.message-header {
+  font-size: 0.8em;
+  color: #777;
+  margin-bottom: 5px;
+}
+
+.my-message .message-header {
+  text-align: right;
+}
+
+.username {
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.message-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-left: 5px; /* For other-message */
+  margin-right: 5px; /* For my-message */
+}
+.my-message .message-avatar {
+  order: 2;
+  margin-left: 0;
+  margin-right: 5px;
+} /* Swap order for my message */
+.my-message .username {
+  order: 1;
+}
+
+.message-content p {
+  margin: 0;
+  word-wrap: break-word;
+}
+
+.message-footer {
+  font-size: 0.7em;
+  color: #aaa;
+  margin-top: 5px;
+  text-align: right;
+}
+
+/* Specific styles for message types */
+.deleted-message {
+  font-style: italic;
+  color: #999;
+}
+
+.file-message {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.file-message a {
+  text-decoration: none;
+  color: #007bff;
+  display: flex;
+  align-items: center;
+}
+.file-message a i {
+  margin-right: 5px;
+}
+
+.audio-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #cfe2ff; /* Light blue for audio */
+  padding: 8px 12px;
+  border-radius: 15px;
+}
+.audio-message button {
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  color: #007bff;
+}
+.audio-progress-bar {
+  flex-grow: 1;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: 0.2s;
+  transition: opacity 0.2s;
+  border-radius: 3px;
+}
+.audio-progress-bar:hover {
+  opacity: 1;
+}
+.audio-progress-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+}
+.audio-progress-bar::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+}
+
+/* Reactions */
+.message-reactions {
+  position: absolute;
+  bottom: -15px; /* Adjust as needed */
+  right: 10px; /* Adjust as needed */
+  background-color: #f0f0f0;
+  border-radius: 10px;
+  padding: 2px 5px;
+  font-size: 0.7em;
+  display: flex;
+  gap: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.edited-tag {
+  font-size: 0.7em;
+  color: #bbb;
+  margin-left: 5px;
+}
+
+/* Message input area */
+.message-input-area {
+  padding: 10px;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.message-input-area input[type="text"] {
+  flex-grow: 1;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  outline: none;
+}
+.message-input-area button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.message-input-area button:hover {
+  background-color: #0056b3;
+}
+.message-input-area button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Recording Controls */
+.recording-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-grow: 1;
+}
+.recording-controls span {
+  font-weight: bold;
+  color: #dc3545; /* Red for recording */
+}
+.recording-controls button {
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+
+/* Edit Modal */
+.edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.edit-modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 400px;
+}
+.edit-modal-content textarea {
+  width: 100%;
+  min-height: 100px;
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.edit-modal-content button {
+  margin-right: 10px;
+}
+
+.typing-indicator {
+  font-size: 0.85em;
+  color: #888;
+  padding: 5px 10px;
+  min-height: 20px; /* Prevent layout shift */
+}

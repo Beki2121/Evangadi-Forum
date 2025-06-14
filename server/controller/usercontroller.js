@@ -71,14 +71,32 @@ const sendResetEmail = async (email, resetLink) => {
     to: email,
     subject: "Password Reset Request for Evangadi Forum",
     html: `
-            <p>Hello,</p>
-            <p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>
-            <p>Please click on the following link, or paste this into your browser to complete the process within one hour of receiving it:</p>
-            <p><a href="${resetLink}">${resetLink}</a></p>
-            <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
-            <p>Best regards,</p>
-            <p>The Evangadi Team</p>
-        `,
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+        <h2 style="color: #2c3e50;">Evangadi Forum - Password Reset</h2>
+        <p style="font-size: 16px; color: #333;">
+          Hello,
+        </p>
+        <p style="font-size: 16px; color: #333;">
+          You are receiving this because you (or someone else) have requested the reset of the password for your account.
+        </p>
+        <p style="font-size: 16px; color: #333;">
+          Please click the button below, or copy and paste the link into your browser to reset your password. This link is valid for one hour.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Reset Your Password
+          </a>
+        </div>
+        <p style="font-size: 14px; color: #555;">
+          Or paste this link into your browser:<br>
+          <a href="${resetLink}" style="color: #007bff;">${resetLink}</a>
+        </p>
+        <p style="font-size: 16px; color: #333;">
+          If you did not request this, please ignore this email and your password will remain unchanged.
+        </p>
+        <p style="font-size: 16px; color: #333;">Best regards,<br>The Evangadi Team</p>
+      </div>
+    `,
   };
 
   try {

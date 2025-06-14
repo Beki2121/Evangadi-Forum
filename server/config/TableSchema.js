@@ -6,9 +6,6 @@ async function initializeDatabase() {
 
   try {
     // Create users table (initial creation or ensure existence)
-    // NOTE: This initial CREATE TABLE should reflect the final desired schema,
-    // but the ALTER TABLE statements below will handle adding new columns
-    // if the table already exists from a previous version without them.
     await dbConnection.query(`
       CREATE TABLE IF NOT EXISTS users (
         userid INT AUTO_INCREMENT PRIMARY KEY,
@@ -18,11 +15,11 @@ async function initializeDatabase() {
         email VARCHAR(40) NOT NULL UNIQUE,
         password VARCHAR(100) NOT NULL,
         avatar_url VARCHAR(2048) DEFAULT NULL,
-        is_verified BOOLEAN DEFAULT FALSE,         -- NEW: Email verification status
-        verification_token VARCHAR(255) UNIQUE,    -- NEW: Token for email verification
-        token_expires_at DATETIME,                 -- NEW: Expiration for verification token
-        reset_password_token VARCHAR(255) UNIQUE,  -- NEW: Token for password reset
-        reset_password_expires DATETIME,           -- NEW: Expiration for password reset token
+        is_verified BOOLEAN DEFAULT FALSE,         
+        verification_token VARCHAR(255) UNIQUE,    
+        token_expires_at DATETIME,                
+        reset_password_token VARCHAR(255) UNIQUE,  
+        reset_password_expires DATETIME,          
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     `);
@@ -73,7 +70,7 @@ async function initializeDatabase() {
     `);
     console.log("Answer ratings table ensured.");
 
-    // Create chat_history table
+    // Create chat_history table (for AI chat, not the live chat)
     await dbConnection.query(`
       CREATE TABLE IF NOT EXISTS chat_history (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -87,62 +84,74 @@ async function initializeDatabase() {
     `);
     console.log("Chat history table ensured.");
 
-    // Create chat_messages table
+    // Create chat_messages table (for live chat)
     await dbConnection.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         message_id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NULL,
         username VARCHAR(255) NOT NULL,
-        message_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+        avatar_url VARCHAR(2048) DEFAULT NULL, -- Added avatar_url here for consistency
+        message_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL, -- Made nullable for file/audio only messages
         room_id VARCHAR(255) NOT NULL,
         message_type ENUM('public', 'private') NOT NULL DEFAULT 'public',
         recipient_id INT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         edited_at DATETIME NULL,
         is_deleted BOOLEAN DEFAULT FALSE NOT NULL,
-        reactions JSON,
+        reactions JSON NULL, -- Made nullable as it can be empty JSON or null
         file_data LONGTEXT NULL,
         file_name VARCHAR(255) NULL,
         file_type VARCHAR(50) NULL,
+        audio_data LONGTEXT NULL,    -- NEW: Column for Base64 audio data
+        audio_type VARCHAR(50) NULL, -- NEW: Column for audio MIME type
+        audio_duration INTEGER NULL, -- NEW: Column for audio duration in seconds
         FOREIGN KEY (user_id) REFERENCES users(userid) ON DELETE SET NULL,
         FOREIGN KEY (recipient_id) REFERENCES users(userid) ON DELETE SET NULL
       ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     `);
-    console.log("Public Chat Messages table ensured.");
+    console.log("Chat Messages table ensured.");
 
     // --- Conditional ALTER TABLE statements for existing databases ---
 
-    // Function to check and add column
+    // Helper function to check and add column if it doesn't exist
     const addColumnIfNotExists = async (
       tableName,
       columnName,
       columnDefinition
     ) => {
-      const [columnExistsResult] = await dbConnection.query(
-        `
-        SELECT COUNT(*) AS count
-        FROM information_schema.columns
-        WHERE table_schema = DATABASE()
-        AND table_name = ?
-        AND column_name = ?;
-      `,
-        [tableName, columnName]
-      );
-
-      if (columnExistsResult[0].count === 0) {
-        await dbConnection.query(`
-          ALTER TABLE ${tableName}
-          ADD COLUMN ${columnName} ${columnDefinition};
-        `);
-        console.log(`Added '${columnName}' column to '${tableName}' table.`);
-      } else {
-        console.log(
-          `'${columnName}' column already exists in '${tableName}' table.`
+      try {
+        const [columnExistsResult] = await dbConnection.query(
+          `
+          SELECT COUNT(*) AS count
+          FROM information_schema.columns
+          WHERE table_schema = DATABASE()
+          AND table_name = ?
+          AND column_name = ?;
+        `,
+          [tableName, columnName]
         );
+
+        if (columnExistsResult[0].count === 0) {
+          await dbConnection.query(`
+            ALTER TABLE ${tableName}
+            ADD COLUMN ${columnName} ${columnDefinition};
+          `);
+          console.log(`Added '${columnName}' column to '${tableName}' table.`);
+        } else {
+          console.log(
+            `'${columnName}' column already exists in '${tableName}' table.`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `Error checking/adding column ${columnName} to ${tableName}:`,
+          error
+        );
+        // Do not exit process, just log error, as this is a migration helper
       }
     };
 
-    // Users table new columns
+    // Users table new columns and existing checks (using helper)
     await addColumnIfNotExists("users", "is_verified", "BOOLEAN DEFAULT FALSE");
     await addColumnIfNotExists(
       "users",
@@ -156,14 +165,24 @@ async function initializeDatabase() {
       "VARCHAR(255) UNIQUE"
     );
     await addColumnIfNotExists("users", "reset_password_expires", "DATETIME");
-
-    // Existing checks (keeping for completeness, but they can use the helper now)
     await addColumnIfNotExists(
       "users",
       "avatar_url",
       "VARCHAR(2048) DEFAULT NULL"
-    );
-    await addColumnIfNotExists("chat_messages", "reactions", "JSON");
+    ); // Ensure avatar_url exists
+
+    // chat_messages table new columns and existing checks (using helper)
+    await addColumnIfNotExists(
+      "chat_messages",
+      "avatar_url",
+      "VARCHAR(2048) DEFAULT NULL"
+    ); // Ensure avatar_url exists in chat_messages
+    await addColumnIfNotExists(
+      "chat_messages",
+      "message_text",
+      "TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL"
+    ); // Ensure nullable
+    await addColumnIfNotExists("chat_messages", "reactions", "JSON NULL"); // Ensure nullable JSON
     await addColumnIfNotExists("chat_messages", "file_data", "LONGTEXT NULL");
     await addColumnIfNotExists(
       "chat_messages",
@@ -176,10 +195,25 @@ async function initializeDatabase() {
       "VARCHAR(50) NULL"
     );
 
-    console.log("✅ All database tables checked/created successfully.");
+    // NEW: Add voice message columns to chat_messages
+    await addColumnIfNotExists("chat_messages", "audio_data", "LONGTEXT NULL");
+    await addColumnIfNotExists(
+      "chat_messages",
+      "audio_type",
+      "VARCHAR(50) NULL"
+    );
+    await addColumnIfNotExists(
+      "chat_messages",
+      "audio_duration",
+      "INTEGER NULL"
+    );
+
+    console.log(
+      "✅ All database tables and columns checked/created/updated successfully."
+    );
   } catch (err) {
     console.error("❌ Error during database table initialization:", err);
-    process.exit(1);
+    process.exit(1); // Exit if critical database initialization fails
   }
 }
 

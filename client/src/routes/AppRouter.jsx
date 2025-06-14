@@ -22,7 +22,7 @@ function AppRouter() {
       <Route path="/howitworks" element={<HowItWorks />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/PrivacyPolicy" element={<PrivacyPolicy />} />
-      <Route path="*" element={<PageNotFound />} /> {/* Keep 404 last */}
+      <Route path="*" element={<PageNotFound />} />
       <Route path="/public-chat" element={<PublicChatPage />} />\
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
