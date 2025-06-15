@@ -99,7 +99,7 @@ const Chatbot = forwardRef((props, ref) => {
       const response = await axios.post(API_CHAT_URL, {
         message: userMessage.parts,
         sessionId: sessionId,
-        // userId: YOUR_USER_ID_HERE, // Pass actual user ID if available
+        // userid: YOUR_userid_HERE, // Pass actual user ID if available
       });
       // const response = await api.post("/chat", {
       //   message: userMessage.parts,
@@ -136,7 +136,7 @@ const Chatbot = forwardRef((props, ref) => {
   const fetchAllChatSessions = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(API_ALL_SESSIONS_URL); // Add ?userId=${YOUR_USER_ID_HERE} if filtering
+      const response = await axios.get(API_ALL_SESSIONS_URL); // Add ?userid=${YOUR_userid_HERE} if filtering
       setChatSessions(response.data.sessions);
     } catch (error) {
       console.error("Error fetching chat sessions:", error);

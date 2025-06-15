@@ -134,26 +134,26 @@ app.use("/api/v1", answerRoutes);
 // Endpoint to fetch chat history for a room (optional, primarily for initial load)
 app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
   const { roomId } = req.params;
-  const { type, targetUserId } = req.query; // Add query params for message type and target user
-  const userId = req.user.userid; // Current authenticated user
+  const { type, targetuserid } = req.query; // Add query params for message type and target user
+  const userid = req.user.userid; // Current authenticated user
 
   try {
     let query;
     let params;
 
-    if (type === "private" && targetUserId) {
-      const dmRoomId = getPrivateChatRoomId(userId, targetUserId);
+    if (type === "private" && targetuserid) {
+      const dmRoomId = getPrivateChatRoomId(userid, targetuserid);
       query = `
-        SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+        SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
         FROM chat_messages
         WHERE room_id = ? AND message_type = 'private'
         ORDER BY created_at ASC LIMIT 200;
       `;
       params = [dmRoomId];
     } else {
-      // Default to public if type is not private or targetUserId is missing
+      // Default to public if type is not private or targetuserid is missing
       query = `
-        SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+        SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
         FROM chat_messages
         WHERE room_id = ? AND message_type = 'public'
         ORDER BY created_at ASC LIMIT 200;`;
@@ -215,7 +215,7 @@ function parseReactionsSafely(reactionsString, messageId = "unknown") {
 
 // ==============================================
 // In-memory store for currently active users (based on connection AND activity)
-const activeUsers = {}; // { userId: { userId, username, avatar_url, sid, lastActivity, currentRoomId } }
+const activeUsers = {}; // { userid: { userid, username, avatar_url, sid, lastActivity, currentRoomId } }
 const ACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
 let lastKnownActiveUsersCount = 0; // Tracks the count for broadcasting updates
 
@@ -238,13 +238,13 @@ async function startServer() {
       console.log(`Client connected: ${socket.id}`);
 
       // Retrieve user info from handshake query
-      const userId = socket.handshake.query.userId;
+      const userid = socket.handshake.query.userid;
       const username = socket.handshake.query.username;
       const avatar_url = socket.handshake.query.avatar_url; // Assuming avatar_url is passed
 
-      if (userId && username) {
-        activeUsers[userId] = {
-          userId: userId,
+      if (userid && username) {
+        activeUsers[userid] = {
+          userid: userid,
           username: username,
           avatar_url: avatar_url, // Store avatar URL
           sid: socket.id,
@@ -255,50 +255,50 @@ async function startServer() {
         io.emit(
           "onlineUsers", // Consistent with frontend
           Object.values(activeUsers).map((u) => ({
-            userId: u.userId,
+            userid: u.userid,
             username: u.username,
             avatar_url: u.avatar_url,
           }))
         );
-        console.log(`User ${username} (ID: ${userId}) connected via socket.`);
+        console.log(`User ${username} (ID: ${userid}) connected via socket.`);
       }
 
       // Emitted by frontend when a user joins a specific chat room
-      socket.on("joinRoom", ({ roomId, userId, username }) => {
+      socket.on("joinRoom", ({ roomId, userid, username }) => {
         socket.join(roomId);
         console.log(
           `Socket ${socket.id} (User: ${username}, Room: ${roomId}) joined.`
         );
         // Update user's current room tracking
-        if (activeUsers[userId]) {
-          activeUsers[userId].currentRoomId = roomId;
-          activeUsers[userId].lastActivity = Date.now();
+        if (activeUsers[userid]) {
+          activeUsers[userid].currentRoomId = roomId;
+          activeUsers[userid].lastActivity = Date.now();
         }
         // No need to emit onlineUsers here again, as it's done on connect/activity
       });
 
       // Emitted by frontend when a user leaves a room (e.g., switching from DM to public)
-      socket.on("leaveRoom", ({ roomId, userId }) => {
+      socket.on("leaveRoom", ({ roomId, userid }) => {
         socket.leave(roomId);
         console.log(
-          `Socket ${socket.id} (User: ${userId}, Room: ${roomId}) left.`
+          `Socket ${socket.id} (User: ${userid}, Room: ${roomId}) left.`
         );
-        if (activeUsers[userId]) {
-          activeUsers[userId].lastActivity = Date.now(); // Still active, just changed room
+        if (activeUsers[userid]) {
+          activeUsers[userid].lastActivity = Date.now(); // Still active, just changed room
         }
       });
 
       // Emitted by frontend to fetch chat history (both public and private)
       socket.on("fetchChatHistory", async (data) => {
-        const { userId, roomId, targetUserId } = data; // userId is the current logged-in user's ID
+        const { userid, roomId, targetuserid } = data; // userid is the current logged-in user's ID
         let query;
         let params;
 
-        if (targetUserId) {
+        if (targetuserid) {
           // It's a private chat
-          const dmRoomId = getPrivateChatRoomId(userId, targetUserId);
+          const dmRoomId = getPrivateChatRoomId(userid, targetuserid);
           query = `
-            SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+            SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
             FROM chat_messages
             WHERE room_id = ? AND message_type = 'private'
             ORDER BY created_at ASC LIMIT 200;
@@ -308,7 +308,7 @@ async function startServer() {
         } else {
           // It's a public chat
           query = `
-            SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+            SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
             FROM chat_messages
             WHERE room_id = ? AND message_type = 'public'
             ORDER BY created_at ASC LIMIT 200;
@@ -337,7 +337,7 @@ async function startServer() {
             `Socket ${
               socket.id
             }: Sent chat history for Room ${roomId} (Target: ${
-              targetUserId || "public"
+              targetuserid || "public"
             })`
           );
         } catch (error) {
@@ -353,7 +353,7 @@ async function startServer() {
       socket.on("sendMessage", async (msg) => {
         const {
           message_text,
-          user_id,
+          userid,
           username,
           avatar_url,
           room_id,
@@ -365,11 +365,11 @@ async function startServer() {
           const now = new Date();
           const reactionsJson = JSON.stringify([]); // New messages start with empty reactions
           const insertQuery = `
-            INSERT INTO chat_messages (user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, reactions)
+            INSERT INTO chat_messages (userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, reactions)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
           `;
           const [result] = await db.query(insertQuery, [
-            user_id,
+            userid,
             username,
             avatar_url,
             message_text,
@@ -382,7 +382,7 @@ async function startServer() {
 
           const newMessage = {
             message_id: result.insertId,
-            user_id,
+            userid,
             username,
             avatar_url,
             message_text,
@@ -403,8 +403,8 @@ async function startServer() {
 
           io.to(room_id).emit("message", newMessage);
           console.log(`Text message sent to room ${room_id} by ${username}.`);
-          if (activeUsers[user_id]) {
-            activeUsers[user_id].lastActivity = Date.now();
+          if (activeUsers[userid]) {
+            activeUsers[userid].lastActivity = Date.now();
           }
         } catch (error) {
           console.error("Error saving text message:", error);
@@ -416,7 +416,7 @@ async function startServer() {
       socket.on("fileMessage", async (msg) => {
         const {
           message_text, // Can be null
-          user_id,
+          userid,
           username,
           avatar_url,
           room_id,
@@ -431,11 +431,11 @@ async function startServer() {
           const now = new Date();
           const reactionsJson = JSON.stringify([]);
           const insertQuery = `
-            INSERT INTO chat_messages (user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, reactions, file_data, file_name, file_type)
+            INSERT INTO chat_messages (userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, reactions, file_data, file_name, file_type)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
           `;
           const [result] = await db.query(insertQuery, [
-            user_id,
+            userid,
             username,
             avatar_url,
             message_text, // Can be null if only file
@@ -451,7 +451,7 @@ async function startServer() {
 
           const newMessage = {
             message_id: result.insertId,
-            user_id,
+            userid,
             username,
             avatar_url,
             message_text,
@@ -472,8 +472,8 @@ async function startServer() {
 
           io.to(room_id).emit("message", newMessage);
           console.log(`File message sent to room ${room_id} by ${username}.`);
-          if (activeUsers[user_id]) {
-            activeUsers[user_id].lastActivity = Date.now();
+          if (activeUsers[userid]) {
+            activeUsers[userid].lastActivity = Date.now();
           }
         } catch (error) {
           console.error("Error saving file message:", error);
@@ -483,14 +483,14 @@ async function startServer() {
 
       socket.on("voiceMessage", async (msg) => {
         console.log("Received voice message:", {
-          userId: msg.user_id,
+          userid: msg.userid,
           roomId: msg.room_id,
           audioType: msg.audio_type,
           audioDataLength: msg.audio_data ? msg.audio_data.length : 0,
           audioDuration: msg.audio_duration,
         });
         const {
-          user_id,
+          userid,
           username,
           avatar_url,
           room_id,
@@ -505,11 +505,11 @@ async function startServer() {
           const now = new Date();
           const reactionsJson = JSON.stringify([]);
           const insertQuery = `
-            INSERT INTO chat_messages (user_id, username, avatar_url, room_id, message_type, recipient_id, created_at, reactions, audio_data, audio_type, audio_duration)
+            INSERT INTO chat_messages (userid, username, avatar_url, room_id, message_type, recipient_id, created_at, reactions, audio_data, audio_type, audio_duration)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
           `;
           const [result] = await db.query(insertQuery, [
-            user_id,
+            userid,
             username,
             avatar_url,
             room_id,
@@ -524,7 +524,7 @@ async function startServer() {
 
           const newMessage = {
             message_id: result.insertId,
-            user_id,
+            userid,
             username,
             avatar_url,
             message_text: null, // Voice messages don't have text directly
@@ -547,8 +547,8 @@ async function startServer() {
           console.log(
             `Voice message sent to room ${room_id} by ${username}. Duration: ${audio_duration}s`
           );
-          if (activeUsers[user_id]) {
-            activeUsers[user_id].lastActivity = Date.now();
+          if (activeUsers[userid]) {
+            activeUsers[userid].lastActivity = Date.now();
           }
         } catch (error) {
           console.error("Error saving voice message:", error);
@@ -558,10 +558,10 @@ async function startServer() {
 
       // Handle message editing
       socket.on("editMessage", async (data) => {
-        const { message_id, new_text, userId } = data;
+        const { message_id, new_text, userid } = data;
         try {
           const [originalMsgRows] = await db.query(
-            "SELECT user_id, is_deleted, message_type, room_id, recipient_id, file_data, file_type, audio_data, audio_type FROM chat_messages WHERE message_id = ?",
+            "SELECT userid, is_deleted, message_type, room_id, recipient_id, file_data, file_type, audio_data, audio_type FROM chat_messages WHERE message_id = ?",
             [message_id]
           );
           if (originalMsgRows.length === 0) {
@@ -570,7 +570,7 @@ async function startServer() {
           }
           const originalMessage = originalMsgRows[0];
 
-          if (originalMessage.user_id !== userId) {
+          if (originalMessage.userid !== userid) {
             socket.emit(
               "error",
               "You are not authorized to edit this message."
@@ -597,7 +597,7 @@ async function startServer() {
           );
 
           const [updatedMsgRows] = await db.query(
-            `SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+            `SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
               FROM chat_messages
               WHERE message_id = ?`,
             [message_id]
@@ -620,14 +620,14 @@ async function startServer() {
           const roomToEmit =
             updatedMessage.message_type === "private" &&
             updatedMessage.recipient_id
-              ? getPrivateChatRoomId(userId, updatedMessage.recipient_id)
+              ? getPrivateChatRoomId(userid, updatedMessage.recipient_id)
               : updatedMessage.room_id;
 
           io.to(roomToEmit).emit("messageUpdated", updatedMessage);
-          console.log(`Message ${message_id} edited by user ${userId}.`);
+          console.log(`Message ${message_id} edited by user ${userid}.`);
 
-          if (activeUsers[userId]) {
-            activeUsers[userId].lastActivity = Date.now();
+          if (activeUsers[userid]) {
+            activeUsers[userid].lastActivity = Date.now();
           }
         } catch (error) {
           console.error("Error editing message:", error);
@@ -637,10 +637,10 @@ async function startServer() {
 
       // Handle message deletion
       socket.on("deleteMessage", async (data) => {
-        const { message_id, userId } = data;
+        const { message_id, userid } = data;
         try {
           const [originalMsgRows] = await db.query(
-            "SELECT user_id, message_type, room_id, recipient_id FROM chat_messages WHERE message_id = ?",
+            "SELECT userid, message_type, room_id, recipient_id FROM chat_messages WHERE message_id = ?",
             [message_id]
           );
           if (originalMsgRows.length === 0) {
@@ -649,7 +649,7 @@ async function startServer() {
           }
           const originalMessage = originalMsgRows[0];
 
-          if (originalMessage.user_id !== userId) {
+          if (originalMessage.userid !== userid) {
             socket.emit(
               "error",
               "You are not authorized to delete this message."
@@ -663,7 +663,7 @@ async function startServer() {
           );
 
           const [updatedMsgRows] = await db.query(
-            `SELECT message_id, user_id, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+            `SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
               FROM chat_messages
               WHERE message_id = ?`,
             [message_id]
@@ -686,14 +686,14 @@ async function startServer() {
           const roomToEmit =
             updatedMessage.message_type === "private" &&
             updatedMessage.recipient_id
-              ? getPrivateChatRoomId(userId, updatedMessage.recipient_id)
+              ? getPrivateChatRoomId(userid, updatedMessage.recipient_id)
               : updatedMessage.room_id;
 
           io.to(roomToEmit).emit("messageUpdated", updatedMessage);
-          console.log(`Message ${message_id} deleted by user ${userId}.`);
+          console.log(`Message ${message_id} deleted by user ${userid}.`);
 
-          if (activeUsers[userId]) {
-            activeUsers[userId].lastActivity = Date.now();
+          if (activeUsers[userid]) {
+            activeUsers[userid].lastActivity = Date.now();
           }
         } catch (error) {
           console.error("Error deleting message:", error);
@@ -703,8 +703,8 @@ async function startServer() {
 
       // Handles message reactions
       socket.on("reactToMessage", async (data) => {
-        const { message_id, userId, username, emoji } = data;
-        if (!message_id || !userId || !username || !emoji) {
+        const { message_id, userid, username, emoji } = data;
+        if (!message_id || !userid || !username || !emoji) {
           console.warn("Invalid reaction data:", data);
           return;
         }
@@ -735,26 +735,26 @@ async function startServer() {
             (r) => r.emoji === emoji
           );
           if (reactionIndex !== -1) {
-            const userIdx =
-              currentReactions[reactionIndex].userIds.indexOf(userId);
-            if (userIdx !== -1) {
+            const useridx =
+              currentReactions[reactionIndex].userids.indexOf(userid);
+            if (useridx !== -1) {
               // User already reacted with this emoji, so remove their reaction
-              currentReactions[reactionIndex].userIds.splice(userIdx, 1);
-              currentReactions[reactionIndex].usernames.splice(userIdx, 1);
-              if (currentReactions[reactionIndex].userIds.length === 0) {
+              currentReactions[reactionIndex].userids.splice(useridx, 1);
+              currentReactions[reactionIndex].usernames.splice(useridx, 1);
+              if (currentReactions[reactionIndex].userids.length === 0) {
                 // If no users left for this emoji, remove the emoji reaction entry
                 currentReactions.splice(reactionIndex, 1);
               }
             } else {
               // User reacted with a new emoji, add their reaction
-              currentReactions[reactionIndex].userIds.push(userId);
+              currentReactions[reactionIndex].userids.push(userid);
               currentReactions[reactionIndex].usernames.push(username);
             }
           } else {
             // New emoji reaction
             currentReactions.push({
               emoji: emoji,
-              userIds: [userId],
+              userids: [userid],
               usernames: [username],
             });
           }
@@ -778,16 +778,16 @@ async function startServer() {
 
           const roomToEmit =
             message.message_type === "private" && message.recipient_id
-              ? getPrivateChatRoomId(userId, message.recipient_id)
+              ? getPrivateChatRoomId(userid, message.recipient_id)
               : message.room_id;
 
           io.to(roomToEmit).emit("messageUpdated", updatedMessage);
           console.log(
-            `Reaction '${emoji}' processed for message ${message_id} by user ${userId}`
+            `Reaction '${emoji}' processed for message ${message_id} by user ${userid}`
           );
 
-          if (activeUsers[userId]) {
-            activeUsers[userId].lastActivity = Date.now();
+          if (activeUsers[userid]) {
+            activeUsers[userid].lastActivity = Date.now();
           }
         } catch (error) {
           console.error("Error reacting to message:", error);
@@ -800,27 +800,27 @@ async function startServer() {
         // Broadcast to others in the room that someone is typing, exclude sender
         const roomToSend =
           data.message_type === "private" && data.recipient_id
-            ? getPrivateChatRoomId(data.userId, data.recipient_id)
+            ? getPrivateChatRoomId(data.userid, data.recipient_id)
             : data.roomId || PUBLIC_CHAT_ROOM_ID;
 
         // Only emit typing if the sender is not the current socket
         socket.to(roomToSend).emit("typing", {
-          userId: data.userId,
+          userid: data.userid,
           username: data.username,
           roomId: roomToSend,
         });
-        if (activeUsers[data.userId]) {
-          activeUsers[data.userId].lastActivity = Date.now();
+        if (activeUsers[data.userid]) {
+          activeUsers[data.userid].lastActivity = Date.now();
         }
       });
 
       socket.on("stopTyping", (data) => {
         const roomToSend =
           data.message_type === "private" && data.recipient_id
-            ? getPrivateChatRoomId(data.userId, data.recipient_id)
+            ? getPrivateChatRoomId(data.userid, data.recipient_id)
             : data.roomId || PUBLIC_CHAT_ROOM_ID;
         socket.to(roomToSend).emit("stopTyping", {
-          userId: data.userId,
+          userid: data.userid,
           roomId: roomToSend,
         });
       });
@@ -828,23 +828,23 @@ async function startServer() {
       // Handles client disconnection
       socket.on("disconnect", () => {
         console.log(`Client disconnected: ${socket.id}`);
-        let disconnectedUserId = null;
-        for (const userId in activeUsers) {
-          if (activeUsers[userId].sid === socket.id) {
-            disconnectedUserId = userId;
+        let disconnecteduserid = null;
+        for (const userid in activeUsers) {
+          if (activeUsers[userid].sid === socket.id) {
+            disconnecteduserid = userid;
             break;
           }
         }
-        if (disconnectedUserId) {
-          delete activeUsers[disconnectedUserId];
+        if (disconnecteduserid) {
+          delete activeUsers[disconnecteduserid];
           console.log(
-            `User ${disconnectedUserId} removed from active users due to disconnect.`
+            `User ${disconnecteduserid} removed from active users due to disconnect.`
           );
           // Immediately broadcast updated online users list
           io.emit(
             "onlineUsers", // Consistent with frontend
             Object.values(activeUsers).map((u) => ({
-              userId: u.userId,
+              userid: u.userid,
               username: u.username,
               avatar_url: u.avatar_url,
             }))
@@ -872,12 +872,12 @@ async function startServer() {
     setInterval(() => {
       const fiveMinutesAgo = Date.now() - ACTIVITY_TIMEOUT_MS;
       let usersRemovedThisCycle = 0;
-      for (const userId in activeUsers) {
-        if (activeUsers[userId].lastActivity < fiveMinutesAgo) {
+      for (const userid in activeUsers) {
+        if (activeUsers[userid].lastActivity < fiveMinutesAgo) {
           console.log(
-            `User ${activeUsers[userId].username} (ID: ${userId}) removed due to inactivity.`
+            `User ${activeUsers[userid].username} (ID: ${userid}) removed due to inactivity.`
           );
-          delete activeUsers[userId];
+          delete activeUsers[userid];
           usersRemovedThisCycle++;
         }
       }
@@ -893,7 +893,7 @@ async function startServer() {
         io.emit(
           "onlineUsers", // Consistent with frontend
           Object.values(activeUsers).map((u) => ({
-            userId: u.userId,
+            userid: u.userid,
             username: u.username,
             avatar_url: u.avatar_url,
           }))

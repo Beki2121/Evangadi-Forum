@@ -61,7 +61,7 @@ const [selectedFile, setSelectedFile] = useState(null); // State for general fil
 const fileInputRef = useRef(null); // Ref for the hidden file input (for images and general files)
 
 const [chatMode, setChatMode] = useState("public"); // 'public' or 'private'
-const [currentDmRecipient, setCurrentDmRecipient] = useState(null); // {userId, username}
+const [currentDmRecipient, setCurrentDmRecipient] = useState(null); // {userid, username}
 const [editingMessageId, setEditingMessageId] = useState(null); // ID of the message being edited
 const [editingMessageText, setEditingMessageText] = useState(""); // Text of the message being edited
 
@@ -87,24 +87,24 @@ setSocket(newSocket);
         newSocket.emit("join_room", PUBLIC_CHAT_ROOM_ID);
         newSocket.emit("fetch_chat_history", {
           roomId: PUBLIC_CHAT_ROOM_ID,
-          userId: user?.userid,
+          userid: user?.userid,
         });
       } else if (chatMode === "private" && currentDmRecipient) {
         // For private chats, the 'room' can be based on the sorted user IDs
-        const dmRoomId = [user.userid, currentDmRecipient.userId]
+        const dmRoomId = [user.userid, currentDmRecipient.userid]
           .sort()
           .join("-");
         newSocket.emit("join_room", dmRoomId);
         newSocket.emit("fetch_chat_history", {
           roomId: dmRoomId,
-          userId: user?.userid,
-          targetUserId: currentDmRecipient.userId,
+          userid: user?.userid,
+          targetuserid: currentDmRecipient.userid,
         });
       }
 
       if (user?.userid && user?.username) {
         newSocket.emit("user_online", {
-          userId: user.userid,
+          userid: user.userid,
           username: user.username,
           avatar_url: user.avatar_url,
         });
@@ -122,9 +122,9 @@ setSocket(newSocket);
         message.message_type === "private" &&
         chatMode === "private" &&
         currentDmRecipient &&
-        ((message.user_id === user?.userid &&
-          message.recipient_id === currentDmRecipient.userId) ||
-          (message.user_id === currentDmRecipient.userId &&
+        ((message.userid === user?.userid &&
+          message.recipient_id === currentDmRecipient.userid) ||
+          (message.userid === currentDmRecipient.userid &&
             message.recipient_id === user?.userid));
 
       if (isForCurrentPublicChat || isForCurrentPrivateChat) {
@@ -157,7 +157,7 @@ setSocket(newSocket);
     });
 
     newSocket.on("typing", (data) => {
-      if (data.userId !== user?.userid) {
+      if (data.userid !== user?.userid) {
         setIsTyping(true);
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = setTimeout(() => {
@@ -167,7 +167,7 @@ setSocket(newSocket);
     });
 
     newSocket.on("stop_typing", (data) => {
-      if (data.userId !== user?.userid) {
+      if (data.userid !== user?.userid) {
         clearTimeout(typingTimeoutRef.current);
         setIsTyping(false);
       }
@@ -177,7 +177,7 @@ setSocket(newSocket);
       console.log("Disconnected from Socket.IO server.");
       setSocket(null);
       if (user?.userid) {
-        newSocket.emit("user_offline", { userId: user.userid });
+        newSocket.emit("user_offline", { userid: user.userid });
       }
     });
 
@@ -266,20 +266,20 @@ setInput(e.target.value);
 if (socket) {
 if (e.target.value.trim().length > 0) {
 socket.emit("typing", {
-userId: user?.userid,
+userid: user?.userid,
 username: user?.username,
 roomId:
 chatMode === "public"
 ? PUBLIC_CHAT_ROOM_ID
-: [user.userid, currentDmRecipient.userId].sort().join("-"),
+: [user.userid, currentDmRecipient.userid].sort().join("-"),
 });
 } else {
 socket.emit("stop_typing", {
-userId: user?.userid,
+userid: user?.userid,
 roomId:
 chatMode === "public"
 ? PUBLIC_CHAT_ROOM_ID
-: [user.userid, currentDmRecipient.userId].sort().join("-"),
+: [user.userid, currentDmRecipient.userid].sort().join("-"),
 });
 }
 }
@@ -287,11 +287,11 @@ clearTimeout(typingTimeoutRef.current);
 typingTimeoutRef.current = setTimeout(() => {
 if (socket)
 socket.emit("stop_typing", {
-userId: user?.userid,
+userid: user?.userid,
 roomId:
 chatMode === "public"
 ? PUBLIC_CHAT_ROOM_ID
-: [user.userid, currentDmRecipient.userId].sort().join("-"),
+: [user.userid, currentDmRecipient.userid].sort().join("-"),
 });
 }, 1000);
 };
@@ -309,13 +309,13 @@ const messageText = input.trim();
       const messagePayload = {
         roomId: PUBLIC_CHAT_ROOM_ID, // Default for public messages, but will be overwritten for private
         text: messageText,
-        userId: user?.userid || null,
+        userid: user?.userid || null,
         username: user?.username || "Anonymous",
         avatar_url: user?.avatar_url || null,
         message_type: chatMode, // 'public' or 'private'
         recipient_id:
           chatMode === "private" && currentDmRecipient
-            ? currentDmRecipient.userId
+            ? currentDmRecipient.userid
             : null,
         reactions: [],
         file_data: selectedFile ? selectedFile.data : selectedImage, // Use file_data for any file
@@ -340,11 +340,11 @@ const messageText = input.trim();
       setShowInputEmojiPicker(false);
       clearTimeout(typingTimeoutRef.current);
       socket.emit("stop_typing", {
-        userId: user?.userid,
+        userid: user?.userid,
         roomId:
           chatMode === "public"
             ? PUBLIC_CHAT_ROOM_ID
-            : [user.userid, currentDmRecipient.userId].sort().join("-"),
+            : [user.userid, currentDmRecipient.userid].sort().join("-"),
       });
     }
 
@@ -375,7 +375,7 @@ return;
 
     socket.emit("react_message", {
       messageId,
-      userId: user.userid,
+      userid: user.userid,
       username: user.username,
       emoji: emoji,
     });
@@ -484,7 +484,7 @@ if (editingMessageId && editingMessageText.trim() && socket) {
 socket.emit("edit_message", {
 messageId: editingMessageId,
 newText: editingMessageText.trim(),
-userId: user?.userid,
+userid: user?.userid,
 });
 setEditingMessageId(null); // Clear editing state
 setEditingMessageText("");
@@ -539,7 +539,7 @@ return;
     if (result.isConfirmed) {
       socket.emit("delete_message", {
         messageId,
-        userId: user.userid,
+        userid: user.userid,
       });
     }
 
@@ -617,10 +617,10 @@ title="Switch to Private Chat" >
         <strong>Online: </strong>
         {onlineUsers.length > 0 ? (
           onlineUsers.map((u) => (
-            <span key={u.userId} className={styles.onlineUserTag}>
+            <span key={u.userid} className={styles.onlineUserTag}>
               <span className={styles.onlineIndicator}></span>
               {u.username}
-              {u.userId !== user?.userid && ( // Don't allow DMing self
+              {u.userid !== user?.userid && ( // Don't allow DMing self
                 <button
                   className={styles.dmButton}
                   onClick={() => switchChatMode("private", u)}
@@ -656,7 +656,7 @@ title="Switch to Private Chat" >
           </div>
         ) : (
           messages.map((msg, index) => {
-            const isMyMessage = msg.user_id === user?.userid;
+            const isMyMessage = msg.userid === user?.userid;
             const isFileMessage = msg.file_data && msg.file_name;
             const isImage =
               isFileMessage &&
@@ -829,7 +829,7 @@ title="Switch to Private Chat" >
                         <span
                           key={reaction.emoji}
                           className={`${styles.reactionBubble} ${
-                            reaction.userIds.includes(user?.userid)
+                            reaction.userids.includes(user?.userid)
                               ? styles.userReacted
                               : ""
                           }`}
@@ -840,7 +840,7 @@ title="Switch to Private Chat" >
                         >
                           <span className={styles.emoji}>{reaction.emoji}</span>
                           <span className={styles.count}>
-                            {reaction.userIds.length}
+                            {reaction.userids.length}
                           </span>
                         </span>
                       ))}
@@ -1067,7 +1067,7 @@ const [onlineUsers, setOnlineUsers] = useState([]); // Only currently online use
 const [allUsers, setAllUsers] = useState([]); // All registered users (fetched via HTTP)
 const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 const [isTyping, setIsTyping] = useState(false);
-const [typingUsers, setTypingUsers] = useState({}); // {userId: username}
+const [typingUsers, setTypingUsers] = useState({}); // {userid: username}
 const [selectedFile, setSelectedFile] = useState(null);
 const [previewUrl, setPreviewUrl] = useState(null);
 const [fileType, setFileType] = useState(null);
@@ -1079,7 +1079,7 @@ const [modalImageType, setModalImageType] = useState(""); // Image Type for moda
 
 // NEW STATES for Private Chat
 const [chatMode, setChatMode] = useState("public"); // 'public' or 'private'
-const [selectedPrivateChatUser, setSelectedPrivateChatUser] = useState(null); // { userId, username, avatar_url }
+const [selectedPrivateChatUser, setSelectedPrivateChatUser] = useState(null); // { userid, username, avatar_url }
 
 const messagesEndRef = useRef(null); // Ref for scrolling to bottom
 const fileInputRef = useRef(null); // Ref for file input
@@ -1105,14 +1105,14 @@ return; // Don't fetch if user isn't logged in
       setTypingUsers({}); // Clear typing indicators
 
       let dataToSend = {
-        userId: user.userid, // Always send current user's ID
+        userid: user.userid, // Always send current user's ID
         roomId: PUBLIC_CHAT_ROOM_ID, // Default to public room ID, will be overridden for private
       };
 
       if (currentMode === "private" && targetUser) {
-        dataToSend.targetUserId = targetUser.userId;
+        dataToSend.targetuserid = targetUser.userid;
       } else if (currentMode === "public") {
-        dataToSend.targetUserId = null; // Ensure targetUserId is null for public
+        dataToSend.targetuserid = null; // Ensure targetuserid is null for public
       }
 
       // Using .on instead of .once to ensure the listener is always active
@@ -1131,9 +1131,9 @@ return; // Don't fetch if user isn't logged in
           filteredHistory = history.filter(
             (msg) =>
               msg.message_type === "private" &&
-              ((msg.user_id === user.userid &&
-                msg.recipient_id === targetUser.userId) ||
-                (msg.user_id === targetUser.userId &&
+              ((msg.userid === user.userid &&
+                msg.recipient_id === targetUser.userid) ||
+                (msg.userid === targetUser.userid &&
                   msg.recipient_id === user.userid))
           );
         }
@@ -1220,7 +1220,7 @@ isMounted.current = true; // Set mounted flag
 
     // Inform backend that user is online
     socket.emit("user_online", {
-      userId: user.userid,
+      userid: user.userid,
       username: user.username,
       avatar_url: user.avatar_url,
     });
@@ -1252,11 +1252,11 @@ isMounted.current = true; // Set mounted flag
         } else if (chatMode === "private" && selectedPrivateChatUser) {
           const isMyDm =
             newMessage.message_type === "private" &&
-            newMessage.user_id === user.userid &&
-            newMessage.recipient_id === selectedPrivateChatUser.userId;
+            newMessage.userid === user.userid &&
+            newMessage.recipient_id === selectedPrivateChatUser.userid;
           const isTheirDm =
             newMessage.message_type === "private" &&
-            newMessage.user_id === selectedPrivateChatUser.userId &&
+            newMessage.userid === selectedPrivateChatUser.userid &&
             newMessage.recipient_id === user.userid;
           if (isMyDm || isTheirDm) {
             return [...prevMessages, newMessage];
@@ -1283,29 +1283,29 @@ isMounted.current = true; // Set mounted flag
     });
 
     // Listen for typing indicators
-    socket.on("typing", ({ userId, username, roomId }) => {
+    socket.on("typing", ({ userid, username, roomId }) => {
       // Determine if typing event is relevant to current view
       const isForCurrentPublicRoom =
         chatMode === "public" && roomId === PUBLIC_CHAT_ROOM_ID;
       const isForCurrentPrivateChat =
         chatMode === "private" &&
         selectedPrivateChatUser &&
-        userId === selectedPrivateChatUser.userId &&
+        userid === selectedPrivateChatUser.userid &&
         roomId ===
-          [user.userid, selectedPrivateChatUser.userId].sort().join("-");
+          [user.userid, selectedPrivateChatUser.userid].sort().join("-");
 
       if (
-        userId !== user.userid &&
+        userid !== user.userid &&
         (isForCurrentPublicRoom || isForCurrentPrivateChat)
       ) {
-        setTypingUsers((prev) => ({ ...prev, [userId]: username }));
+        setTypingUsers((prev) => ({ ...prev, [userid]: username }));
       }
     });
 
-    socket.on("stop_typing", ({ userId }) => {
+    socket.on("stop_typing", ({ userid }) => {
       setTypingUsers((prev) => {
         const newTypingUsers = { ...prev };
-        delete newTypingUsers[userId];
+        delete newTypingUsers[userid];
         return newTypingUsers;
       });
     });
@@ -1350,7 +1350,7 @@ setIsLoading(false);
 setEmptyChat(true);
 // Clear typing indicators for logged-out user
 socket.emit("stop_typing", {
-userId: user?.userid, // Use optional chaining just in case
+userid: user?.userid, // Use optional chaining just in case
 roomId: PUBLIC_CHAT_ROOM_ID, // Or any room user was in
 });
 setTypingUsers({});
@@ -1373,20 +1373,20 @@ setMessageInput(e.target.value);
       chatMode === "public"
         ? PUBLIC_CHAT_ROOM_ID
         : selectedPrivateChatUser
-        ? [user.userid, selectedPrivateChatUser.userId].sort().join("-")
+        ? [user.userid, selectedPrivateChatUser.userid].sort().join("-")
         : null; // No room if private chat mode selected but no user
 
     if (currentRoomId) {
       if (e.target.value.trim().length > 0 && !isTyping) {
         socket.emit("typing", {
-          userId: user.userid,
+          userid: user.userid,
           username: user.username,
           roomId: currentRoomId,
         });
         setIsTyping(true);
       } else if (e.target.value.trim().length === 0 && isTyping) {
         socket.emit("stop_typing", {
-          userId: user.userid,
+          userid: user.userid,
           roomId: currentRoomId,
         });
         setIsTyping(false);
@@ -1433,7 +1433,7 @@ return;
       chatMode === "public"
         ? PUBLIC_CHAT_ROOM_ID
         : selectedPrivateChatUser
-        ? [user.userid, selectedPrivateChatUser.userId].sort().join("-")
+        ? [user.userid, selectedPrivateChatUser.userid].sort().join("-")
         : null;
 
     // --- Start Optimistic UI Update ---
@@ -1443,17 +1443,17 @@ return;
     const baseMessageData = {
       roomId: currentChatRoomId,
       text: messageInput.trim(),
-      userId: user.userid,
+      userid: user.userid,
       username: user.username,
       avatar_url: user.avatar_url,
       message_type: chatMode,
       recipient_id:
-        chatMode === "private" ? selectedPrivateChatUser.userId : null,
+        chatMode === "private" ? selectedPrivateChatUser.userid : null,
     };
 
     const tempMessage = {
       message_id: tempId, // Temporary ID
-      user_id: user.userid,
+      userid: user.userid,
       username: user.username,
       avatar_url: user.avatar_url,
       message_text: baseMessageData.text,
@@ -1491,7 +1491,7 @@ return;
           socket.emit("edit_message", {
             messageId: editingMessage.message_id,
             newText: baseMessageData.text,
-            userId: user.userid,
+            userid: user.userid,
             file_data: baseMessageData.file_data,
             file_name: baseMessageData.file_name,
             file_type: baseMessageData.file_type,
@@ -1507,7 +1507,7 @@ return;
         setFileType(null);
         if (isTyping) {
           socket.emit("stop_typing", {
-            userId: user.userid,
+            userid: user.userid,
             roomId: currentChatRoomId,
           });
           setIsTyping(false);
@@ -1526,7 +1526,7 @@ return;
         socket.emit("edit_message", {
           messageId: editingMessage.message_id,
           newText: baseMessageData.text,
-          userId: user.userid,
+          userid: user.userid,
           file_data: null,
           file_name: null,
           file_type: null,
@@ -1539,7 +1539,7 @@ return;
       setMessageInput("");
       if (isTyping) {
         socket.emit("stop_typing", {
-          userId: user.userid,
+          userid: user.userid,
           roomId: currentChatRoomId,
         });
         setIsTyping(false);
@@ -1559,7 +1559,7 @@ const updatedMessages = prevMessages.filter(
 (msg) =>
 !(
 msg.status === "sending" &&
-msg.user_id === confirmedMessage.user_id &&
+msg.userid === confirmedMessage.userid &&
 msg.message_text === confirmedMessage.message_text &&
 msg.room_id === confirmedMessage.room_id
 )
@@ -1666,7 +1666,7 @@ confirmButtonText: "Yes, delete it!",
 if (result.isConfirmed) {
 socket.emit("delete_message", {
 messageId: messageId,
-userId: user.userid,
+userid: user.userid,
 });
 }
 });
@@ -1683,7 +1683,7 @@ return;
 }
 socket.emit("react_message", {
 messageId,
-userId: user.userid,
+userid: user.userid,
 username: user.username,
 emoji,
 });
@@ -1744,7 +1744,7 @@ return;
 // If selecting the currently selected user again, do nothing
 if (
 selectedPrivateChatUser &&
-selectedPrivateChatUser.userId === targetUser.userId
+selectedPrivateChatUser.userid === targetUser.userid
 ) {
 return;
 }
@@ -1758,8 +1758,8 @@ fetchChatHistory("private", targetUser);
 };
 
 // Helper to check if a user is online
-const isUserOnline = (userId) => {
-return onlineUsers.some((onlineUser) => onlineUser.userId === userId);
+const isUserOnline = (userid) => {
+return onlineUsers.some((onlineUser) => onlineUser.userid === userid);
 };
 
 // Render logic if user is not logged in
@@ -1818,7 +1818,7 @@ Private
           <div className={styles.onlineUsersButtonWrapper}>
             <button className={styles.onlineUsersButton}>
               Online:{" "}
-              {onlineUsers.filter((u) => u.userId !== user.userid).length}{" "}
+              {onlineUsers.filter((u) => u.userid !== user.userid).length}{" "}
               <FontAwesomeIcon icon={faUsers} />
             </button>
           </div>
@@ -2015,7 +2015,7 @@ Private
                     <li
                       key={u.userid}
                       className={`${styles.onlineUserItem} ${
-                        selectedPrivateChatUser?.userId === u.userid // Use userId for comparison
+                        selectedPrivateChatUser?.userid === u.userid // Use userid for comparison
                           ? styles.selectedUser
                           : ""
                       }`}

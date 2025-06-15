@@ -11,7 +11,7 @@ import { UserState } from "../../App.jsx"; // Assuming UserState is provided by 
 
 function Header() {
   const { user } = useContext(UserState);
-  const userId = user?.userid;
+  const userid = user?.userid;
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
@@ -41,13 +41,13 @@ function Header() {
         >
           <Nav className={classes.nav_links_holder}>
             {/* Conditional Home Link */}
-            {userId && (
+            {userid && (
               <Nav.Link as={Link} to="/" className={classes.navigation_links}>
                 Home
               </Nav.Link>
             )}
             {/* Conditional Chat Link */}
-            {userId && (
+            {userid && (
               <Nav.Link
                 as={Link}
                 to="/public-chat"
@@ -66,7 +66,7 @@ function Header() {
             </Nav.Link>
 
             {/* Conditional rendering for authenticated vs. unauthenticated user */}
-            {userId ? (
+            {userid ? (
               // Authenticated user: Logout button and Profile Icon
               <>
                 <button onClick={handleSignOut} className={classes.logout_btn}>
@@ -74,7 +74,7 @@ function Header() {
                 </button>
                 <Nav.Link
                   as={Link}
-                  to={`/profile/${userId}`}
+                  to={`/profile/${userid}`}
                   className={classes.profile_icon_link} // Styling for profile circle
                   title={user?.username} // Tooltip for username
                 >

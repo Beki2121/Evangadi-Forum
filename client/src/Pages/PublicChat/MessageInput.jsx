@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 
 // Assuming MessageItem receives a 'message' object and 'currentUser' object
 function MessageItem({ message, currentUser, onEdit, onDelete, onReact }) {
-  const isMyMessage = message.user_id === currentUser.userid;
+  const isMyMessage = message.userid === currentUser.userid;
   const audioRef = useRef(null); // Ref for the audio element
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -145,7 +145,7 @@ function MessageItem({ message, currentUser, onEdit, onDelete, onReact }) {
           <div className="message-reactions">
             {message.reactions.map((r, index) => (
               <span key={index} title={r.usernames.join(", ")}>
-                {r.emoji} {r.userIds.length}
+                {r.emoji} {r.userids.length}
               </span>
             ))}
           </div>

@@ -1,4 +1,4 @@
-import { useContext, useRef } from "react"; // Remove useState
+import { useContext, useRef } from "react";
 import classes from "./askQuestion.module.css";
 import { axiosInstance } from "../../../utility/axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -6,30 +6,27 @@ import Layout from "../../../Layout/Layout.jsx";
 import { UserState } from "../../../App.jsx";
 import Swal from "sweetalert2";
 
-// REMOVE THIS IMPORT: import Chatbot from "../../../components/Chatbot/Chatbot.jsx";
-
 function AskQuestion() {
   const navigate = useNavigate();
   const { user } = useContext(UserState);
 
-  // REMOVE THESE STATES:
-  // const [showChatbot, setShowChatbot] = useState(false);
-
   const titleDom = useRef();
   const descriptionDom = useRef();
-  const userId = user?.userid;
+  // This userid correctly accesses the userid from the user context
+  const userid = user?.userid;
   console.log(user);
 
   async function handleSubmit(e) {
     e.preventDefault();
     const title = titleDom.current.value;
     const description = descriptionDom.current.value;
-    const userid = userId;
+    // REMOVED: const userid = userid; -- This line caused the ReferenceError
+    // The 'userid' from the component's scope is already accessible here.
     const tag = "General";
 
     try {
       const response = await axiosInstance.post("/question", {
-        userid,
+        userid, // Using the 'userid' from the component's scope
         title,
         description,
         tag,
@@ -62,12 +59,6 @@ function AskQuestion() {
       });
     }
   }
-
-  // REMOVE THIS FUNCTION:
-  // const toggleChatbotVisibility = () => {
-  //   setShowChatbot((prev) => !prev);
-  // };
-
   return (
     <Layout>
       <div className={classes.allContainer}>
@@ -138,36 +129,10 @@ function AskQuestion() {
                     Back to Home
                   </button>
                 </Link>
-                {/* REMOVE CHATBOT BUTTON/ICON HERE */}
-                {/* <div
-                  className={classes.chatbotIconWrapper}
-                  onClick={toggleChatbotVisibility}
-                  title={showChatbot ? "Hide Chatbot" : "Ask Chatbot"}
-                >
-                  <span className={classes.chatbotIcon}>🤖</span>
-                </div> */}
               </div>
             </form>
           </div>
         </div>
-
-        {/* REMOVE CONDITIONAL CHATBOT RENDERING HERE */}
-        {/* {showChatbot && (
-          <div className={classes.columnSection}>
-            <div className={classes.aiChatContentWrapper}>
-              <h3 className={classes.question__header__title}>
-                <span className={classes.highlight}>
-                  Get AI Assistance for Your Question
-                </span>
-              </h3>
-              <p className={classes.aiChatPrompt}>
-                Need help formulating your question? Ask our AI assistant for
-                suggestions, clarity, or related concepts!
-              </p>
-              <Chatbot />
-            </div>
-          </div>
-        )} */}
       </div>
     </Layout>
   );

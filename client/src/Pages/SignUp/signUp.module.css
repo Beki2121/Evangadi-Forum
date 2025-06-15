@@ -1,6 +1,6 @@
 .formcontainer {
   background-color: white;
-  padding: 15px 30px; ;
+  padding: 15px 30px;
   margin: 30px auto;
   border-radius: 10px;
   text-align: center;
@@ -8,7 +8,8 @@
   max-height: 500px;
   max-width: 500px !important;
   /* border: 1px solid #ccc; */
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px,
+    rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
 }
 
 .formcontainer h2 {
@@ -17,7 +18,7 @@
   font-weight: bold;
 }
 .formcontainer p {
-  margin:10px 0;
+  margin: 10px 0;
   font-size: 16px;
 }
 
@@ -53,14 +54,14 @@ input[type="password"] {
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
-  margin:5px;
+  margin: 5px;
 }
 
 .submitbtn:hover {
   background-color: var(--blue-main);
 }
 
-.togglebtn{
+.togglebtn {
   margin-top: -7px;
   font-size: 18px !important;
 }
@@ -115,19 +116,17 @@ a:hover {
   cursor: pointer;
   font-size: 10px;
   color: rgb(108, 103, 103);
-  
 }
-.passwordinput a{
+.passwordinput a {
   color: #ff6600;
-  text-decoration:underline;
+  text-decoration: underline;
 }
 
 /* add responsive styles for signup */
 
-@media screen and (max-width: 768px) {  
+@media screen and (max-width: 768px) {
   .formcontainer {
     max-width: 100% !important;
     min-width: 100% !important;
   }
-  
 }

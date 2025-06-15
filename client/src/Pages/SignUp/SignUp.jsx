@@ -77,6 +77,17 @@ function Signup({ onSwitch }) {
       });
     }
 
+    // --- Start: Add loading Swal here ---
+    Swal.fire({
+      title: "Registering...",
+      text: "Please wait while we process your registration.",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+    // --- End: Add loading Swal here ---
+
     try {
       const response = await axiosInstance.post("/user/register", {
         username: formData.username,
@@ -85,6 +96,8 @@ function Signup({ onSwitch }) {
         email: formData.email,
         password: formData.password,
       });
+
+      Swal.close(); // Close the loading Swal
 
       if (response.status === 201) {
         setError(null);
@@ -119,6 +132,7 @@ function Signup({ onSwitch }) {
         setSuccess(null);
       }
     } catch (err) {
+      Swal.close(); // Close the loading Swal even if an error occurs
       setError(
         err.response?.data?.Msg ||
           "Error submitting the form. Please try again. " + err.message

@@ -130,7 +130,7 @@ async function getQuestionAndAnswer(req, res) {
 async function markAnswerAsSolution(req, res) {
   const { questionId } = req.params;
   const { solutionAnswerId } = req.body;
-  const loggedInUserId = req.user.userid; // User ID from authMiddleware
+  const loggedInuserid = req.user.userid; // User ID from authMiddleware
 
   if (!solutionAnswerId) {
     return res
@@ -153,7 +153,7 @@ async function markAnswerAsSolution(req, res) {
 
     const questionOwnerId = questionRows[0].userid;
 
-    if (questionOwnerId !== loggedInUserId) {
+    if (questionOwnerId !== loggedInuserid) {
       return res.status(StatusCodes.FORBIDDEN).json({
         msg: "You are not authorized to mark a solution for this question.",
       });

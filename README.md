@@ -180,17 +180,17 @@ FOREIGN KEY (userid) REFERENCES users(userid) ON DELETE CASCADE
 CREATE TABLE IF NOT EXISTS chat_history (
 id INT AUTO_INCREMENT PRIMARY KEY,
 session_id VARCHAR(255) NOT NULL,
-user_id INT NULL,
+userid INT NULL,
 role ENUM('user', 'model') NOT NULL,
 content TEXT NOT NULL,
 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-FOREIGN KEY (user_id) REFERENCES users(userid) ON DELETE SET NULL
+FOREIGN KEY (userid) REFERENCES users(userid) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CHAT MESSAGES TABLE (FOR LIVE CHAT)
 CREATE TABLE IF NOT EXISTS chat_messages (
 message_id INT AUTO_INCREMENT PRIMARY KEY,
-user_id INT NULL,
+userid INT NULL,
 username VARCHAR(255) NOT NULL,
 avatar_url VARCHAR(2048) DEFAULT NULL,
 message_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL,
@@ -207,6 +207,6 @@ file_type VARCHAR(50) NULL,
 audio_data LONGTEXT NULL,
 audio_type VARCHAR(50) NULL,
 audio_duration INTEGER NULL,
-FOREIGN KEY (user_id) REFERENCES users(userid) ON DELETE SET NULL,
+FOREIGN KEY (userid) REFERENCES users(userid) ON DELETE SET NULL,
 FOREIGN KEY (recipient_id) REFERENCES users(userid) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

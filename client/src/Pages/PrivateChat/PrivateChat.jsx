@@ -16,19 +16,19 @@ useEffect(() => {
 {
   callStartTime && <p className="text-sm text-gray-500">🕒 {duration}</p>;
 }
-const [incomingCall, setIncomingCall] = useState(null); // { fromUserId, fromName }
+const [incomingCall, setIncomingCall] = useState(null); // { fromuserid, fromName }
 const [showCallModal, setShowCallModal] = useState(false);
 
 useEffect(() => {
-  socket.on("voice-offer", ({ fromUserId, offer, fromName }) => {
-    setIncomingCall({ fromUserId, offer, fromName });
+  socket.on("voice-offer", ({ fromuserid, offer, fromName }) => {
+    setIncomingCall({ fromuserid, offer, fromName });
     setShowCallModal(true);
   });
 }, []);
 
 const handleAccept = () => {
   if (incomingCall) {
-    handleVoiceOffer(socket, incomingCall.fromUserId, incomingCall.offer);
+    handleVoiceOffer(socket, incomingCall.fromuserid, incomingCall.offer);
     setShowCallModal(false);
   }
 };

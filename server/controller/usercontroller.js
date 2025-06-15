@@ -485,7 +485,7 @@ async function getUserProfileById(req, res) {
 
 async function updateUserProfile(req, res) {
   const { userid } = req.params;
-  const authenticatedUserId = req.user?.userid; // Assuming req.user is populated by authMiddleware
+  const authenticateduserid = req.user?.userid; // Assuming req.user is populated by authMiddleware
 
   const { fullname, username, email, password, avatar_url } = req.body;
 
@@ -510,7 +510,7 @@ async function updateUserProfile(req, res) {
     });
   }
 
-  if (authenticatedUserId && parseInt(userid) !== authenticatedUserId) {
+  if (authenticateduserid && parseInt(userid) !== authenticateduserid) {
     return res.status(StatusCodes.FORBIDDEN).json({
       Msg: "You are not authorized to update this user's profile.",
     });
