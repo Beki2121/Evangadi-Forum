@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { Link } from "react-router-dom";
 import styles from "./HowItWorks.module.css";
 import Layout from "../../Layout/Layout.jsx";
@@ -14,50 +14,73 @@ const HowItWorks = () => {
         <div className={styles.inner_container}>
           <h2 className={styles.title}>Purpose of the Platform</h2>
           <p className={styles.description}>
-            The site’s purpose is to foster collaborative learning among
+            The platform’s purpose is to foster collaborative learning among
             students by enabling them to ask questions, answer peers, and review
-            responses. It creates an interactive platform where students can
-            share knowledge, support each other, and enhance their understanding
-            through discussion and feedback.
+            responses. It creates an interactive environment where students can
+            share knowledge, support each other, and enhance understanding
+            through discussions and feedback.
           </p>
 
           <div className={styles.steps}>
             <div className={styles.step}>
-              <h3>User Authentication</h3>
+              <h3>1️⃣ User Authentication 🔐</h3>
               <p>
-                Students begin by creating an account to access all features of
-                the platform. This allows them to access different questions and
-                answers. they can ask question and also collaborate for other
-                questions by answering them.
+                Students create an account with{" "}
+                <strong>email verification</strong> and can use{" "}
+                <strong>password reset</strong> when needed. This ensures
+                secure, personal access.
               </p>
             </div>
 
             <div className={styles.step}>
-              <h3>Q&A Features</h3>
+              <h3>2️⃣ Q&A Features + Search 🔍</h3>
               <p>
-                Once registered, students can post questions related to their
-                academic challenges or queries, providing a space for others to
-                help.
-                <br />
-                Students also can browse existing questions and contribute by
-                providing their answers, offering insights, solutions, or
-                guidance.
+                Ask and answer academic questions. Use the{" "}
+                <strong>search</strong> function to check if your question has
+                already been answered — saving time and avoiding duplicates.
               </p>
             </div>
 
             <div className={styles.step}>
-              <h3>Review Answers</h3>
+              <h3>3️⃣ Review & Mark as Solution ✅</h3>
               <p>
-                After reviewing the answers, students can rate them, helping to
-                highlight the best responses and improve the overall quality of
-                the platform.
+                Users can <strong>upvote</strong> helpful answers and{" "}
+                <strong>mark</strong> the best one as the accepted solution.
+                This helps future students find reliable answers easily.
+              </p>
+            </div>
+
+            <div className={styles.step}>
+              <h3>4️⃣ Live Chat + Files & Voice 🎤📎</h3>
+              <p>
+                Engage in real-time chat with peers. Send and receive{" "}
+                <strong>images, PDFs, other files</strong>, and now even{" "}
+                <strong>voice messages</strong> — enhancing collaboration.
+              </p>
+            </div>
+
+            <div className={styles.step}>
+              <h3>5️⃣ Edit Profile 🧑‍💻</h3>
+              <p>
+                Keep your account up-to-date by editing your{" "}
+                <strong>name, email, and password</strong>. A personalized
+                profile improves your learning journey.
+              </p>
+            </div>
+
+            <div className={styles.step}>
+              <h3>6️⃣ Get Help from Chatbot 🤖</h3>
+              <p>
+                Our built-in <strong>Gemini chatbot</strong> assists with quick
+                answers, definitions, or suggestions while you wait for help —
+                like your 24/7 study buddy!
               </p>
             </div>
           </div>
 
           <div className="parentContainer">
             {userid ? (
-              <>{null}</>
+              <></>
             ) : (
               <div className={styles.buttonContainer}>
                 <Link to={"/auth"}>

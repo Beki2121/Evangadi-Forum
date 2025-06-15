@@ -116,7 +116,7 @@ const VerifyEmail = () => {
           <h2>Verification Failed</h2>
           <p style={{ color: "red" }}>{message}</p>
           <button
-            onClick={() => navigate("/signup")}
+            onClick={() => navigate("/auth")}
             style={{
               backgroundColor: "#007bff",
               color: "white",
