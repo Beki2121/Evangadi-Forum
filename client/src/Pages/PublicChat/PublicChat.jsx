@@ -997,33 +997,44 @@ const PublicChat = () => {
                       )}
 
                       {/* Reactions here, after text/files/audio */}
-                      {msg.reactions && msg.reactions.length > 0 && (
-                        <div className={styles.reactionsContainer}>
-                          {msg.reactions.map((reaction) => (
-                            <span
-                              key={reaction.emoji}
-                              className={`${styles.reactionBubble} ${
-                                reaction.userids.includes(user?.userid)
-                                  ? styles.userReacted
-                                  : ""
-                              }`}
-                              onClick={() =>
-                                handleReaction(msg.message_id, reaction.emoji)
-                              }
-                              title={`Reacted by: ${reaction.usernames.join(
-                                ", "
-                              )}`}
-                            >
-                              <span className={styles.emoji}>
-                                {reaction.emoji}
+                      {console.log("msg.reactions", msg.reactions)}
+                      {Array.isArray(msg.reactions) &&
+                        msg.reactions.length > 0 && (
+                          <div className={styles.reactionsContainer}>
+                            {msg.reactions.map((reaction) => (
+                              <span
+                                key={reaction.emoji}
+                                className={`${styles.reactionBubble} ${
+                                  Array.isArray(reaction.userids) &&
+                                  reaction.userids.includes(user?.userid)
+                                    ? styles.userReacted
+                                    : ""
+                                }`}
+                                onClick={() =>
+                                  handleReaction(msg.message_id, reaction.emoji)
+                                }
+                                title={
+                                  Array.isArray(reaction.usernames) &&
+                                  reaction.usernames.length > 0
+                                    ? `Reacted by: ${reaction.usernames.join(
+                                        ", "
+                                      )}`
+                                    : "React"
+                                }
+                              >
+                                <span className={styles.emoji}>
+                                  {reaction.emoji}
+                                </span>
+                                <span className={styles.count}>
+                                  {Array.isArray(reaction.userids)
+                                    ? reaction.userids.length
+                                    : 0}
+                                </span>
                               </span>
-                              <span className={styles.count}>
-                                {reaction.userids.length}
-                              </span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        )}
+                      {console.log("msg.reactions", msg.reactions)}
                     </>
                   )}
 

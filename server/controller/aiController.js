@@ -3,13 +3,26 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { StatusCodes } = require("http-status-codes");
 const dbConnection = require("../config/dbConfig"); // Import your database connection
 
-// Use a currently supported model. 'gemini-1.5-flash' is a good balance of speed and capability.
-// If you need more advanced reasoning, try 'gemini-1.5-pro' (check availability for your API key).
-const MODEL_NAME = "gemini-1.5-flash";
+// Supported Gemini models
+const SUPPORTED_MODELS = [
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
+  "gemini-1.0-pro",
+  "gemini-1.0-ultra",
+  // "gemini-1.0-nano" // (API use not typical)
+];
+
+// Use a currently supported model. You can switch as needed via .env
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 const API_KEY = process.env.GEMINI_API_KEY;
 
 // --- Backend Initialization Logs ---
 console.log("Backend Init: MODEL_NAME set to:", MODEL_NAME);
+if (!SUPPORTED_MODELS.includes(MODEL_NAME)) {
+  console.warn(
+    `Warning: MODEL_NAME "${MODEL_NAME}" is not in SUPPORTED_MODELS. Check for typos or update SUPPORTED_MODELS if new models are available.`
+  );
+}
 console.log(
   "Backend Init: API_KEY present (first 5 chars):",
   API_KEY ? API_KEY.substring(0, 5) + "..." : "NOT SET"
@@ -20,7 +33,6 @@ if (!API_KEY) {
   console.error(
     "GEMINI_API_KEY is not set in environment variables. Please check your .env file and server restart."
   );
-  // It's good practice to prevent the server from starting if a crucial API key is missing
   throw new Error("Missing GEMINI_API_KEY. Server cannot start without it.");
 }
 
@@ -28,7 +40,6 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 
 async function saveMessageToDb(sessionId, userid, role, content) {
   try {
-    // Ensure userid is explicitly null if it's undefined from the request body
     const actualuserid = userid === undefined ? null : userid;
     const [result] = await dbConnection.execute(
       `INSERT INTO chat_history (session_id, userid, role, content) VALUES (?, ?, ?, ?)`,
@@ -37,7 +48,6 @@ async function saveMessageToDb(sessionId, userid, role, content) {
     console.log(`Saved ${role} message to DB, ID: ${result.insertId}`);
   } catch (dbError) {
     console.error("Error saving message to database:", dbError);
-    // Log the error but don't prevent the AI response from being sent
   }
 }
 
@@ -47,26 +57,23 @@ async function loadHistoryFromDb(sessionId) {
       `SELECT role, content FROM chat_history WHERE session_id = ? ORDER BY timestamp ASC`,
       [sessionId]
     );
-    // The Gemini SDK expects history to be an array of objects like { role: 'user', parts: [{ text: '...' }] }
     return rows.map((row) => ({
       role: row.role,
       parts: [{ text: row.content }],
     }));
   } catch (dbError) {
     console.error("Error loading chat history from database:", dbError);
-    return []; // Return empty history on error
+    return [];
   }
 }
 
 async function chatWithAI(req, res) {
-  const { message, sessionId, userid } = req.body; // `userid` might be undefined
+  const { message, sessionId, userid } = req.body;
 
-  // --- Chatbot Request Logging ---
   console.log("--- Chatbot Request Received ---");
   console.log("Session ID:", sessionId);
-  console.log("User ID:", userid); // This will show 'undefined' if not sent from frontend
+  console.log("User ID:", userid);
   console.log("Incoming Message:", message);
-  // --- End Chatbot Request Logging ---
 
   if (!message) {
     return res
@@ -80,29 +87,23 @@ async function chatWithAI(req, res) {
   }
 
   try {
-    // 1. Save user's message to DB immediately
     await saveMessageToDb(sessionId, userid, "user", message);
 
-    // 2. Load full conversation history from DB for the Gemini API call
-    // This provides context for the AI to understand the ongoing conversation
     const loadedHistory = await loadHistoryFromDb(sessionId);
 
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    // Start a chat with the loaded history as context
     const chat = model.startChat({
       history: loadedHistory,
       generationConfig: {
-        maxOutputTokens: 200, // Limit AI response length
+        maxOutputTokens: 200,
       },
     });
 
-    // Send the new user message to the AI
     const result = await chat.sendMessage([{ text: message }]);
     const response = await result.response;
     const aiText = response.text();
 
-    // 3. Save AI's response to DB
     await saveMessageToDb(sessionId, userid, "model", aiText);
 
     console.log("AI Reply received successfully.");
@@ -118,7 +119,7 @@ async function chatWithAI(req, res) {
 }
 
 async function getChatHistory(req, res) {
-  const { sessionId } = req.query; // Assuming sessionId comes as a query parameter
+  const { sessionId } = req.query;
 
   if (!sessionId) {
     return res
@@ -131,10 +132,9 @@ async function getChatHistory(req, res) {
       `SELECT role, content FROM chat_history WHERE session_id = ? ORDER BY timestamp ASC`,
       [sessionId]
     );
-    // Frontend expects { role: 'user', parts: '...' } format
     const historyForFrontend = rows.map((row) => ({
       role: row.role,
-      parts: row.content, // Send content as string back to frontend
+      parts: row.content,
     }));
     res.status(StatusCodes.OK).json({ history: historyForFrontend });
   } catch (error) {
@@ -147,11 +147,6 @@ async function getChatHistory(req, res) {
 }
 
 async function getAllChatSessions(req, res) {
-  // If you have authenticated users, you'd typically get userid from req.user.id (from middleware)
-  // For now, it lists all unique sessions.
-  // Uncomment and adjust if you implement user-specific session filtering:
-  // const { userid } = req.query;
-
   try {
     let query = `
       SELECT
@@ -159,32 +154,15 @@ async function getAllChatSessions(req, res) {
         MAX(timestamp) AS last_updated_at,
         SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN role = 'user' THEN content END ORDER BY timestamp ASC), ',', 1) AS first_user_message
       FROM chat_history
-      -- WHERE userid = ? -- Uncomment and add params.push(userid) if filtering by user
       GROUP BY session_id
       ORDER BY last_updated_at DESC
     `;
     let params = [];
 
-    // If you plan to filter by user:
-    // if (userid) {
-    //   query = `
-    //     SELECT
-    //       session_id,
-    //       MAX(timestamp) AS last_updated_at,
-    //       SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN role = 'user' THEN content END ORDER BY timestamp ASC), ',', 1) AS first_user_message
-    //     FROM chat_history
-    //     WHERE userid = ?
-    //     GROUP BY session_id
-    //     ORDER BY last_updated_at DESC
-    //   `;
-    //   params = [userid];
-    // }
-
     const [rows] = await dbConnection.execute(query, params);
 
     const sessions = rows.map((row) => ({
       id: row.session_id,
-      // Attempt to use the first user message as the name, or a default
       name: row.first_user_message
         ? row.first_user_message.substring(0, 50) +
           (row.first_user_message.length > 50 ? "..." : "")

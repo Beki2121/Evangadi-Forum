@@ -19,14 +19,9 @@ const Chatbot = forwardRef((props, ref) => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
-  const [currentView, setCurrentView] = useState("chat"); // 'chat' or 'historyList'
+  const [currentView, setCurrentView] = useState("chat");
   const [chatSessions, setChatSessions] = useState([]);
-
-  // Use a different ref name internally if you still need to scroll,
-  // or use the forwarded 'ref' for scrolling if it points to the messagesContainer.
-  // For now, let's keep messagesEndRef for internal scrolling.
   const messagesEndRef = useRef(null);
-
   const API_CHAT_URL = "http://localhost:5000/api/ai/chat";
   const API_HISTORY_URL = "http://localhost:5000/api/ai/history";
   const API_ALL_SESSIONS_URL = "http://localhost:5000/api/ai/sessions";

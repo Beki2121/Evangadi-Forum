@@ -18,7 +18,7 @@ const io = new Server(server, {
 });
 
 app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json({ limit: "50mb" })); // Increased limit for larger file/voice data
+app.use(express.json({ limit: "5000mb" })); // Increased limit for larger file/voice data
 
 // Public route
 app.get("/", (req, res) => {
@@ -132,53 +132,53 @@ const answerRoutes = require("./routes/answerRoute");
 app.use("/api/v1", answerRoutes);
 
 // Endpoint to fetch chat history for a room (optional, primarily for initial load)
-app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
-  const { roomId } = req.params;
-  const { type, targetuserid } = req.query; // Add query params for message type and target user
-  const userid = req.user.userid; // Current authenticated user
+// app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
+//   const { roomId } = req.params;
+//   const { type, targetuserid } = req.query; // Add query params for message type and target user
+//   const userid = req.user.userid; // Current authenticated user
 
-  try {
-    let query;
-    let params;
+//   try {
+//     let query;
+//     let params;
 
-    if (type === "private" && targetuserid) {
-      const dmRoomId = getPrivateChatRoomId(userid, targetuserid);
-      query = `
-        SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
-        FROM chat_messages
-        WHERE room_id = ? AND message_type = 'private'
-        ORDER BY created_at ASC LIMIT 200;
-      `;
-      params = [dmRoomId];
-    } else {
-      // Default to public if type is not private or targetuserid is missing
-      query = `
-        SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
-        FROM chat_messages
-        WHERE room_id = ? AND message_type = 'public'
-        ORDER BY created_at ASC LIMIT 200;`;
-      params = [roomId];
-    }
+//     if (type === "private" && targetuserid) {
+//       const dmRoomId = getPrivateChatRoomId(userid, targetuserid);
+//       query = `
+//         SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+//         FROM chat_messages
+//         WHERE room_id = ? AND message_type = 'private'
+//         ORDER BY created_at ASC LIMIT 200;
+//       `;
+//       params = [dmRoomId];
+//     } else {
+//       // Default to public if type is not private or targetuserid is missing
+//       query = `
+//         SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+//         FROM chat_messages
+//         WHERE room_id = ? AND message_type = 'public'
+//         ORDER BY created_at ASC LIMIT 200;`;
+//       params = [roomId];
+//     }
 
-    const [messages] = await db.query(query, params);
-    const formattedMessages = messages.map((msg) => {
-      return {
-        ...msg,
-        reactions: parseReactionsSafely(msg.reactions, msg.message_id),
-        file_data: msg.file_data || null,
-        file_name: msg.file_name || null,
-        file_type: msg.file_type || null,
-        audio_data: msg.audio_data || null,
-        audio_type: msg.audio_type || null,
-        audio_duration: msg.audio_duration || null,
-      };
-    });
-    res.status(200).json(formattedMessages);
-  } catch (error) {
-    console.error("Error fetching chat history via HTTP:", error);
-    res.status(500).json({ message: "Server error fetching chat history" });
-  }
-});
+//     const [messages] = await db.query(query, params);
+//     const formattedMessages = messages.map((msg) => {
+//       return {
+//         ...msg,
+//         reactions: parseReactionsSafely(msg.reactions, msg.message_id),
+//         file_data: msg.file_data || null,
+//         file_name: msg.file_name || null,
+//         file_type: msg.file_type || null,
+//         audio_data: msg.audio_data || null,
+//         audio_type: msg.audio_type || null,
+//         audio_duration: msg.audio_duration || null,
+//       };
+//     });
+//     res.status(200).json(formattedMessages);
+//   } catch (error) {
+//     console.error("Error fetching chat history via HTTP:", error);
+//     res.status(500).json({ message: "Server error fetching chat history" });
+//   }
+// });
 
 // Helper function to generate a consistent private chat room ID
 // Ensures that DM between User A and User B always has the same room ID (e.g., "1-2" not "2-1")
@@ -700,8 +700,6 @@ async function startServer() {
           socket.emit("error", "Failed to delete message.");
         }
       });
-
-      // Handles message reactions
       socket.on("reactToMessage", async (data) => {
         const { message_id, userid, username, emoji } = data;
         if (!message_id || !userid || !username || !emoji) {
@@ -710,8 +708,9 @@ async function startServer() {
         }
 
         try {
+          // 1. Get the current message
           const [messages] = await db.query(
-            "SELECT reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration, message_type, room_id, recipient_id, is_deleted FROM chat_messages WHERE message_id = ?",
+            "SELECT * FROM chat_messages WHERE message_id = ?",
             [message_id]
           );
 
@@ -759,27 +758,45 @@ async function startServer() {
             });
           }
 
+          // 2. Update the DB
           await db.query(
             "UPDATE chat_messages SET reactions = ? WHERE message_id = ?",
             [JSON.stringify(currentReactions), message_id]
           );
 
+          // 3. Fetch the full, updated message from DB
+          const [updatedMsgRows] = await db.query(
+            `SELECT * FROM chat_messages WHERE message_id = ?`,
+            [message_id]
+          );
+
+          if (updatedMsgRows.length === 0) {
+            socket.emit("error", "Updated message not found.");
+            return;
+          }
+
           const updatedMessage = {
-            ...message, // Keep all other message properties
-            reactions: currentReactions, // Send the updated parsed object to the client
-            // Ensure file/audio data are also passed through
-            file_data: message.file_data || null,
-            file_name: message.file_name || null,
-            file_type: message.file_type || null,
-            audio_data: message.audio_data || null,
-            audio_type: message.audio_type || null,
-            audio_duration: message.audio_duration || null,
+            ...updatedMsgRows[0],
+            reactions: parseReactionsSafely(
+              updatedMsgRows[0].reactions,
+              updatedMsgRows[0].message_id
+            ),
+            file_data: updatedMsgRows[0].file_data || null,
+            file_name: updatedMsgRows[0].file_name || null,
+            file_type: updatedMsgRows[0].file_type || null,
+            audio_data: updatedMsgRows[0].audio_data || null,
+            audio_type: updatedMsgRows[0].audio_type || null,
+            audio_duration: updatedMsgRows[0].audio_duration || null,
           };
 
+          // Debug log to verify reactions before emitting
+          console.log("Emitting updated message:", updatedMessage);
+
           const roomToEmit =
-            message.message_type === "private" && message.recipient_id
-              ? getPrivateChatRoomId(userid, message.recipient_id)
-              : message.room_id;
+            updatedMessage.message_type === "private" &&
+            updatedMessage.recipient_id
+              ? getPrivateChatRoomId(userid, updatedMessage.recipient_id)
+              : updatedMessage.room_id;
 
           io.to(roomToEmit).emit("messageUpdated", updatedMessage);
           console.log(
@@ -794,8 +811,7 @@ async function startServer() {
           socket.emit("error", "Failed to react to message.");
         }
       });
-
-      // Handles user typing indicator
+      r;
       socket.on("typing", (data) => {
         // Broadcast to others in the room that someone is typing, exclude sender
         const roomToSend =
