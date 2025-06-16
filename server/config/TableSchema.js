@@ -81,11 +81,11 @@ async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS chat_history (
         id INT AUTO_INCREMENT PRIMARY KEY,
         session_id VARCHAR(255) NOT NULL,
-        userid INT NULL, -- Changed from userid to userid for consistency
+        userid INT NULL, -- Changed from user_id to userid for consistency
         role ENUM('user', 'model') NOT NULL,
         content TEXT NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (userid) REFERENCES users(userid) ON DELETE SET NULL -- Changed from userid to userid
+        FOREIGN KEY (userid) REFERENCES users(userid) ON DELETE SET NULL -- Changed from user_id to userid
       ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     `);
     console.log("Chat history table ensured.");
@@ -94,7 +94,7 @@ async function initializeDatabase() {
     await dbConnection.query(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         message_id INT AUTO_INCREMENT PRIMARY KEY,
-        userid INT NULL, -- NULL if message from a guest or deleted user
+        user_id INT NULL, -- NULL if message from a guest or deleted user
         username VARCHAR(255) NOT NULL,
         avatar_url VARCHAR(2048) DEFAULT NULL,
         message_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL, -- Nullable for file/audio only messages
@@ -111,7 +111,7 @@ async function initializeDatabase() {
         audio_data LONGTEXT NULL,    -- Base64 encoded audio data
         audio_type VARCHAR(50) NULL, -- MIME type of the audio
         audio_duration INTEGER NULL, -- Duration of the audio in seconds
-        FOREIGN KEY (userid) REFERENCES users(userid) ON DELETE SET NULL,
+        FOREIGN KEY (user_id) REFERENCES users(userid) ON DELETE SET NULL,
         FOREIGN KEY (recipient_id) REFERENCES users(userid) ON DELETE SET NULL
       ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     `);

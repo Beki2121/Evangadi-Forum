@@ -1459,3 +1459,31 @@ body {
   padding: 5px 10px;
   min-height: 20px; /* Prevent layout shift */
 }
+.onlineIndicatorSmall {
+  display: inline-block;
+  width: 20px;
+  height: 4px;
+  background: #4caf50;
+  border-radius: 2px;
+  margin-left: 8px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.offlineIndicatorSmall {
+  display: inline-block;
+  width: 20px;
+  height: 4px;
+  background: #bbb;
+  border-radius: 2px;
+  margin-left: 8px;
+}

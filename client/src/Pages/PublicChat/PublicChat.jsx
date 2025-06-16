@@ -727,7 +727,15 @@ const PublicChat = () => {
       return;
     }
 
-    const audio = new Audio(audioData);
+    // Ensure audioData is a valid data URI
+    let audioSrc = audioData;
+    if (!audioSrc.startsWith("data:audio/")) {
+      // If your backend sends only base64, you may need to know the type (e.g., webm, ogg, mp3)
+      // Here, we default to webm. Adjust if your backend uses a different type.
+      audioSrc = `data:audio/webm;base64,${audioSrc}`;
+    }
+
+    const audio = new Audio(audioSrc);
     audioRefs.current[messageId] = audio; // Store instance
 
     audio.onplay = () => {
@@ -750,9 +758,9 @@ const PublicChat = () => {
       delete audioRefs.current[messageId];
     };
 
+    audio.load(); // Ensure the audio is loaded before playing
     audio.play();
   };
-
   const pauseAudio = (messageId) => {
     const audio = audioRefs.current[messageId];
     if (audio) {
@@ -794,7 +802,12 @@ const PublicChat = () => {
             className={`${styles.chatModeButton} ${
               chatMode === "private" ? styles.activeMode : ""
             }`}
-            onClick={() => setShowRegisteredUsersModal(true)} // Open modal to select DM recipient
+            onClick={() => {
+              setShowRegisteredUsersModal(true);
+              if (socket) {
+                socket.emit("getRegisteredUsers"); // <-- Add this line
+              }
+            }}
             disabled={!user?.userid}
             title="Start a Private Chat"
           >
@@ -1171,8 +1184,16 @@ const PublicChat = () => {
                         <span>{u.username}</span>
                         {onlineUsers.some(
                           (onlineUser) => onlineUser.userid === u.userid
-                        ) && (
-                          <span className={styles.onlineIndicatorSmall}></span>
+                        ) ? (
+                          <span
+                            className={styles.onlineIndicatorSmall}
+                            title="Online"
+                          ></span>
+                        ) : (
+                          <span
+                            className={styles.offlineIndicatorSmall}
+                            title="Offline"
+                          ></span>
                         )}
                       </div>
                       <button

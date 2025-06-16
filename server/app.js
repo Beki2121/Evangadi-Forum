@@ -864,6 +864,20 @@ async function startServer() {
       socket.on("voice-candidate", ({ candidate, to }) => {
         io.to(to).emit("voice-candidate", { candidate, from: socket.id });
       });
+      // ...inside io.on("connection", (socket) => { ... })...
+
+      socket.on("getRegisteredUsers", async () => {
+        try {
+          // Exclude sensitive info, only send what's needed for chat
+          const [users] = await db.query(
+            "SELECT userid, username, avatar_url FROM users WHERE is_verified = 1"
+          );
+          socket.emit("registeredUsers", users);
+        } catch (error) {
+          console.error("Error fetching registered users:", error);
+          socket.emit("registeredUsers", []); // Send empty list on error
+        }
+      });
     });
 
     // ==========================================================
