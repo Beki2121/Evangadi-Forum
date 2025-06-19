@@ -811,7 +811,7 @@ async function startServer() {
           socket.emit("error", "Failed to react to message.");
         }
       });
-      r;
+
       socket.on("typing", (data) => {
         // Broadcast to others in the room that someone is typing, exclude sender
         const roomToSend =

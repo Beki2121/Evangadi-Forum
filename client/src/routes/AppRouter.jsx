@@ -14,6 +14,8 @@ import PublicChatPage from "../Pages/PublicChatPage/PublicChatPage.jsx";
 import UserProfile from "../Pages/UserProfile/UserProfile.jsx"; // Import UserProfile component
 import ResetPassword from "../Pages/ForgotPassword/ResetPassword.jsx";
 import VerifyEmail from "../Pages/SignUp/VerifyEmail.jsx";
+import EditQuestion from "../Pages/Question/AskQuestion/EditQuestion.jsx";
+
 function AppRouter() {
   return (
     <Routes>
@@ -33,6 +35,7 @@ function AppRouter() {
         <Route path="/" element={<Home />} />
         <Route path="/ask" element={<AskQuestion />} />
         <Route path="/question/:questionId" element={<QuestionAndAnswer />} />
+        <Route path="/edit-question/:id" element={<EditQuestion />} />
         <Route path="/chatbot" element={<Chatbot />} />
         <Route path="/profile/:userid" element={<UserProfile />} />
         {/* Add any other routes that should only be accessible when logged in here */}

@@ -5,6 +5,9 @@ const {
   getAnswer,
   postAnswer,
   rateAnswer,
+  deleteAnswer,
+  confirmDeleteAnswer,
+  editAnswer,
 } = require("../controller/answerController");
 const authMiddleware = require("../middleware/authMiddleware"); // Assuming this is your auth middleware
 
@@ -16,5 +19,12 @@ router.post("/answer", authMiddleware, postAnswer); // Assuming postAnswer also 
 
 // NEW ROUTE FOR RATING
 router.post("/answer/rate", authMiddleware, rateAnswer); // Protected by authMiddleware
+
+// Delete an answer (ask for confirmation)
+router.delete('/answer/:answerId', authMiddleware, deleteAnswer);
+// Confirmed delete (actual removal)
+router.post('/answer/:answerId/confirm-delete', authMiddleware, confirmDeleteAnswer);
+// Edit an answer
+router.put('/answer/:answerId', authMiddleware, editAnswer);
 
 module.exports = router;

@@ -163,6 +163,7 @@ function Question() {
               questionTitle={question.title} // Ensure this prop matches your data
               description={question.description} // Ensure this prop matches your data
               question_date={question.createdAt}
+              ownerId={question.userid} // Pass owner id for permission checks
             />
           ))}
 

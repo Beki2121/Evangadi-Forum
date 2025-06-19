@@ -163,9 +163,88 @@ async function rateAnswer(req, res) {
   }
 }
 
+// Delete an answer (with ownership check)
+async function deleteAnswer(req, res) {
+  const { answerId } = req.params;
+  const loggedInUserId = req.user.userid;
+  try {
+    // Check ownership
+    const [rows] = await dbConnection.query(
+      'SELECT userid FROM answers WHERE answerid = ?',
+      [answerId]
+    );
+    if (rows.length === 0) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Answer not found.' });
+    }
+    if (rows[0].userid !== loggedInUserId) {
+      return res.status(StatusCodes.FORBIDDEN).json({ message: 'You are not authorized to delete this answer.' });
+    }
+    // Instead of deleting immediately, return a confirmation message
+    return res.status(StatusCodes.OK).json({ confirm: true, message: 'Are you sure you want to delete this answer? This action cannot be undone.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Something went wrong, please try again later.' });
+  }
+}
+
+// Confirmed delete (actual removal)
+async function confirmDeleteAnswer(req, res) {
+  const { answerId } = req.params;
+  const loggedInUserId = req.user.userid;
+  try {
+    // Check ownership again
+    const [rows] = await dbConnection.query(
+      'SELECT userid FROM answers WHERE answerid = ?',
+      [answerId]
+    );
+    if (rows.length === 0) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Answer not found.' });
+    }
+    if (rows[0].userid !== loggedInUserId) {
+      return res.status(StatusCodes.FORBIDDEN).json({ message: 'You are not authorized to delete this answer.' });
+    }
+    await dbConnection.query('DELETE FROM answers WHERE answerid = ?', [answerId]);
+    return res.status(StatusCodes.OK).json({ message: 'Answer deleted successfully.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Something went wrong, please try again later.' });
+  }
+}
+
+// Edit an answer (with ownership check)
+async function editAnswer(req, res) {
+  const { answerId } = req.params;
+  const { answer } = req.body;
+  const loggedInUserId = req.user.userid;
+  try {
+    // Check ownership
+    const [rows] = await dbConnection.query(
+      'SELECT userid FROM answers WHERE answerid = ?',
+      [answerId]
+    );
+    if (rows.length === 0) {
+      return res.status(StatusCodes.NOT_FOUND).json({ message: 'Answer not found.' });
+    }
+    if (rows[0].userid !== loggedInUserId) {
+      return res.status(StatusCodes.FORBIDDEN).json({ message: 'You are not authorized to edit this answer.' });
+    }
+    await dbConnection.query(
+      'UPDATE answers SET answer = ? WHERE answerid = ?',
+      [answer, answerId]
+    );
+    return res.status(StatusCodes.OK).json({ message: 'Answer updated successfully.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Something went wrong, please try again later.' });
+  }
+}
+
 // Export all the functions that will be used as route handlers
 module.exports = {
   getAnswer,
   postAnswer,
   rateAnswer, // Export the new rating function
+  deleteAnswer,
+  confirmDeleteAnswer,
+  editAnswer,
 };

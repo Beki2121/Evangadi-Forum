@@ -21,6 +21,8 @@ function QuestionAndAnswer() {
   const [loading, setLoading] = useState(true); // Initial state for loading
   const [expandedAnswer, setExpandedAnswer] = useState(null); // State to track expanded answers
   const answerInput = useRef();
+  const [editingAnswerId, setEditingAnswerId] = useState(null);
+  const [editAnswerText, setEditAnswerText] = useState("");
 
   // Function to fetch question details and answers
   const fetchQuestionAndAnswers = async () => {
@@ -342,95 +344,200 @@ function QuestionAndAnswer() {
 
           {/* Display answers */}
           {questionDetails?.answers?.length > 0 ? (
-            questionDetails?.answers?.map((answer) => (
-              <div key={answer?.answerid} className={styles.answer_holder}>
-                <div className={styles.account_holder}>
-                  <MdAccountCircle size={50} />
-                  <div className={styles.profileName}>@{answer?.username}</div>
-                </div>
-                <div className={styles.answerContentArea}>
-                  {" "}
-                  <div
-                    className={styles.answerTextContainer}
-                    onClick={() => toggleExpandAnswer(answer?.answerid)}
-                  >
-                    <p className={styles.answerText}>
-                      {expandedAnswer === answer?.answerid
-                        ? answer?.answer
-                        : truncateText(answer?.answer)}
-                    </p>
-                    <p className={styles.answer_date}>
-                      <LuCalendarClock
-                        style={{ marginRight: "5px" }}
-                        size={19}
-                      />
-                      {moment(answer?.createdAt)
-                        .format("ddd, MMM DD, h:mm A")
-                        .toUpperCase()}
-                    </p>
+            questionDetails?.answers?.map((answer) => {
+              const isAnswerOwner = userid === answer.userid;
+              return (
+                <div key={answer?.answerid} className={styles.answer_holder}>
+                  <div className={styles.account_holder}>
+                    <MdAccountCircle size={50} />
+                    <div className={styles.profileName}>@{answer?.username}</div>
                   </div>
-                  {/* RATING SECTION */}
-                  <div className={styles.ratingSection}>
-                    <button
-                      className={styles.ratingButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRating(answer?.answerid, "upvote");
-                      }}
-                      title="Upvote this answer"
-                    >
-                      <FaThumbsUp size={20} />
-                    </button>
-                    <span className={styles.ratingCount}>
-                      {answer?.rating_count || 0}{" "}
-                      {/* Displays the rating_count from backend */}
-                    </span>
-                    <button
-                      className={styles.ratingButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRating(answer?.answerid, "downvote");
-                      }}
-                      title="Downvote this answer"
-                    >
-                      <FaThumbsDown size={20} />
-                    </button>
-
-                    {/* Mark as Solution Button / Solution Indicator */}
-                    {isQuestionOwner && !solutionAnswerId && (
-                      <button
-                        className={styles.markSolutionButton}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMarkAsSolution(answer?.answerid);
-                        }}
-                        title="Mark this as the solution"
-                      >
-                        Mark as Solution
-                      </button>
-                    )}
-
-                    {solutionAnswerId === answer?.answerid && (
-                      <div
-                        className={styles.solutionIndicator}
-                        title="Marked as Solution"
-                      >
-                        <FaCheckCircle size={50} color="green" />
-                        <span
-                          style={{
-                            marginLeft: "5px",
-                            color: "green",
-                            fontWeight: "bold",
+                  <div className={styles.answerContentArea}>
+                    <div className={styles.answerTextContainer} onClick={() => toggleExpandAnswer(answer?.answerid)}>
+                      {editingAnswerId === answer.answerid ? (
+                        <form
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            const token = localStorage.getItem("token");
+                            if (!token) {
+                              Swal.fire({
+                                title: "Authentication Required",
+                                text: "You must be logged in to edit an answer.",
+                                icon: "warning",
+                                confirmButtonText: "OK",
+                              });
+                              return;
+                            }
+                            try {
+                              const res = await axiosInstance.put(
+                                `/answer/${answer.answerid}`,
+                                { answer: editAnswerText },
+                                { headers: { Authorization: `Bearer ${token}` } }
+                              );
+                              if (res.status === 200) {
+                                Swal.fire({
+                                  title: "Success!",
+                                  text: "Answer updated successfully!",
+                                  icon: "success",
+                                  confirmButtonText: "OK",
+                                });
+                                setEditingAnswerId(null);
+                                fetchQuestionAndAnswers();
+                              } else {
+                                Swal.fire({
+                                  title: "Error",
+                                  text: res.data.message || "Failed to update answer.",
+                                  icon: "error",
+                                  confirmButtonText: "OK",
+                                });
+                              }
+                            } catch (error) {
+                              Swal.fire({
+                                title: "Error",
+                                text: error.response?.data?.message || "Failed to update answer.",
+                                icon: "error",
+                                confirmButtonText: "OK",
+                              });
+                            }
                           }}
                         >
-                          Solution
-                        </span>
-                      </div>
-                    )}
+                          <textarea
+                            value={editAnswerText}
+                            onChange={(e) => setEditAnswerText(e.target.value)}
+                            rows={3}
+                            style={{ width: "100%", borderRadius: 5, padding: 8, marginBottom: 8 }}
+                            required
+                          />
+                          <button type="submit" style={{ marginRight: 8, background: "#0c4df163", border: "none", borderRadius: 5, padding: "6px 12px", cursor: "pointer" }}>Save</button>
+                          <button type="button" onClick={() => setEditingAnswerId(null)} style={{ background: "#ccc", border: "none", borderRadius: 5, padding: "6px 12px", cursor: "pointer" }}>Cancel</button>
+                        </form>
+                      ) : (
+                        <p className={styles.answerText}>
+                          {expandedAnswer === answer?.answerid ? answer?.answer : truncateText(answer?.answer)}
+                        </p>
+                      )}
+                      <p className={styles.answer_date}>
+                        <LuCalendarClock style={{ marginRight: "5px" }} size={19} />
+                        {moment(answer?.createdAt).format("ddd, MMM DD, h:mm A").toUpperCase()}
+                      </p>
+                    </div>
+                    <div className={styles.ratingSection}>
+                      <button
+                        className={styles.ratingButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRating(answer?.answerid, "upvote");
+                        }}
+                        title="Upvote this answer"
+                      >
+                        <FaThumbsUp size={20} />
+                      </button>
+                      <span className={styles.ratingCount}>{answer?.rating_count || 0}</span>
+                      <button
+                        className={styles.ratingButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRating(answer?.answerid, "downvote");
+                        }}
+                        title="Downvote this answer"
+                      >
+                        <FaThumbsDown size={20} />
+                      </button>
+                      {isQuestionOwner && !solutionAnswerId && (
+                        <button
+                          className={styles.markSolutionButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMarkAsSolution(answer?.answerid);
+                          }}
+                          title="Mark this as the solution"
+                        >
+                          Mark as Solution
+                        </button>
+                      )}
+                      {solutionAnswerId === answer?.answerid && (
+                        <div className={styles.solutionIndicator} title="Marked as Solution">
+                          <FaCheckCircle size={50} color="green" />
+                          <span style={{ marginLeft: "5px", color: "green", fontWeight: "bold" }}>Solution</span>
+                        </div>
+                      )}
+                      {isAnswerOwner && editingAnswerId !== answer.answerid && (
+                        <>
+                          <button
+                            style={{ marginLeft: 10, background: "#0c4df163", border: "none", borderRadius: 5, padding: "6px 12px", cursor: "pointer" }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingAnswerId(answer.answerid);
+                              setEditAnswerText(answer.answer);
+                            }}
+                          >Edit</button>
+                          <button
+                            style={{ marginLeft: 5, background: "#ff4d4f", color: "white", border: "none", borderRadius: 5, padding: "6px 12px", cursor: "pointer" }}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const token = localStorage.getItem("token");
+                              if (!token) {
+                                Swal.fire({
+                                  title: "Authentication Required",
+                                  text: "You must be logged in to delete an answer.",
+                                  icon: "warning",
+                                  confirmButtonText: "OK",
+                                });
+                                return;
+                              }
+                              // Step 1: Ask backend for confirmation message
+                              try {
+                                const res = await axiosInstance.delete(`/answer/${answer.answerid}`, {
+                                  headers: { Authorization: `Bearer ${token}` },
+                                });
+                                if (res.data.confirm) {
+                                  const result = await Swal.fire({
+                                    title: "Delete Answer?",
+                                    text: res.data.message,
+                                    icon: "warning",
+                                    showCancelButton: true,
+                                    confirmButtonText: "Yes, delete it!",
+                                    cancelButtonText: "No, cancel",
+                                  });
+                                  if (result.isConfirmed) {
+                                    const delRes = await axiosInstance.post(`/answer/${answer.answerid}/confirm-delete`, {}, {
+                                      headers: { Authorization: `Bearer ${token}` },
+                                    });
+                                    if (delRes.status === 200) {
+                                      Swal.fire({
+                                        title: "Deleted!",
+                                        text: "Your answer has been deleted.",
+                                        icon: "success",
+                                        confirmButtonText: "OK",
+                                      });
+                                      fetchQuestionAndAnswers();
+                                    } else {
+                                      Swal.fire({
+                                        title: "Error",
+                                        text: delRes.data.message || "Failed to delete answer.",
+                                        icon: "error",
+                                        confirmButtonText: "OK",
+                                      });
+                                    }
+                                  }
+                                }
+                              } catch (error) {
+                                Swal.fire({
+                                  title: "Error",
+                                  text: error.response?.data?.message || "Failed to delete answer.",
+                                  icon: "error",
+                                  confirmButtonText: "OK",
+                                });
+                              }
+                            }}
+                          >Delete</button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p>
               <span style={{ color: "red", fontWeight: "bold" }}>
