@@ -9,35 +9,10 @@ import { BrowserRouter as Router } from "react-router-dom";
 
 <ToastContainer position="top-right" autoClose={3000} />;
 export const UserState = createContext();
-export const DarkModeContext = createContext();
 
 function App() {
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-
-  // Load dark mode preference from localStorage on app start
-  useEffect(() => {
-    const savedDarkMode = localStorage.getItem("darkMode");
-    if (savedDarkMode !== null) {
-      setDarkMode(JSON.parse(savedDarkMode));
-    } else {
-      // Check system preference
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      setDarkMode(prefersDark);
-    }
-  }, []);
-
-  // Save dark mode preference to localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem("darkMode", JSON.stringify(darkMode));
-    // Apply dark mode class to body
-    if (darkMode) {
-      document.body.classList.add("dark-mode");
-    } else {
-      document.body.classList.remove("dark-mode");
-    }
-  }, [darkMode]);
 
   const login = (userData, token) => {
     localStorage.setItem("token", token);
@@ -115,10 +90,6 @@ function App() {
     }
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
-
   useEffect(() => {
     getUserData();
   }, []);
@@ -128,13 +99,9 @@ function App() {
   }
 
   return (
-    <DarkModeContext.Provider value={{ darkMode, toggleDarkMode }}>
-      <UserState.Provider value={{ user, setUser, login, logout, refreshUserData, loadingUser }}>
-        <Router>
-          <AppRouter />
-        </Router>
-      </UserState.Provider>
-    </DarkModeContext.Provider>
+    <UserState.Provider value={{ user, setUser, login, logout, refreshUserData, loadingUser }}>
+      <AppRouter />
+    </UserState.Provider>
   );
 }
 

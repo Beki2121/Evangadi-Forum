@@ -31,18 +31,6 @@ h6 {
   font-family: var(--header-font), sans-serif !important;
 }
 
-/* Dark mode overrides for existing color variables */
-.dark-mode {
-  --primary-color: #ff9f1c;
-  --primary-shade: #ffb347;
-  --blue-main: #4a90e2;
-  --blue-shade: #357abd;
-  --green-success: #2ecc71;
-  --red-error: #e74c3c;
-  --yellow-warning: #f39c12;
-  --info-blue: #3498db;
-}
-
 /* Ensure smooth transitions for all elements */
 * {
   transition: background-color var(--transition-normal, 0.3s ease), 

@@ -99,13 +99,14 @@ a:hover {
 
 .passwordinput button {
   position: absolute;
-  top: 35%;
-  right: 10px;
+  top: 45%;
+  right: 5px;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
   font-size: 20px;
+  margin-top: 0;
 }
 .passwordinput label {
   position: absolute;

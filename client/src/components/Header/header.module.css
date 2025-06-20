@@ -1,167 +1,101 @@
-/* Custom styles for the main Navbar component */
+/* Classic header styles for Evangadi Forum */
+
 .navbar_custom {
   position: sticky;
   top: 0;
   z-index: 3;
-  background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-  padding-left: 1rem; /* Equivalent to Bootstrap's px-3 */
-  padding-right: 1rem; /* Equivalent to Bootstrap's px-3 */
-  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+  background-color: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
-/* Dark mode styles for navbar */
-.navbar_custom.dark_mode {
-  background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-}
-
-/* Styles for the Container inside the Navbar */
 .header_container {
   display: flex;
-  justify-content: space-between; /* Pushes logo to left, nav to right */
+  justify-content: space-between;
   align-items: center;
-  padding: 10px 0 !important; /* Adjusted padding to remove horizontal padding from container, as navbar_custom handles it */
+  padding: 10px 0;
   margin: auto;
-  width: 90% !important; /* Slightly wider than 83% for better spacing, more responsive */
-  max-width: 1200px; /* Max width for large screens to prevent stretching */
+  width: 90%;
+  max-width: 1200px;
 }
 
-/* Styles for the Navbar.Collapse component */
 .navbar_collapse_custom {
-  flex-grow: 1; /* Allows the collapse content to take available space */
+  flex-grow: 1;
   display: flex;
-  justify-content: flex-end; /* Pushes content (nav links, buttons) to the right */
+  justify-content: flex-end;
 }
 
-/* Styles for the Nav component (container for navigation links and buttons) */
 .nav_links_holder {
   display: flex;
-  flex-direction: column; /* Default to column for mobile stacking */
-  align-items: stretch; /* Stretch items to full width in column layout */
-  width: 100%; /* Full width for mobile */
-}
-
-/* Media query for medium and larger screens (desktop) */
-@media (min-width: 768px) {
-  .nav_links_holder {
-    flex-direction: row; /* Arranges items in a row for desktop */
-    justify-content: flex-end; /* Pushes nav items to the far right */
-    align-items: center; /* Vertically centers items in the row */
-    width: auto; /* Allows content to dictate its width, rather than full width */
-  }
-}
-
-/* Dark mode toggle container */
-.dark_mode_toggle_container {
-  display: flex;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  margin: 8px 0;
+  width: auto;
 }
 
-@media (min-width: 768px) {
-  .dark_mode_toggle_container {
-    margin: 0 10px;
-  }
-}
-
-/* Styles for individual navigation links */
 .navigation_links {
-  font-size: 18px !important;
-  color: var(--text-color) !important;
-  padding: 8px 12px; /* Reduced padding for a more compact look */
-  font-weight: 500 !important;
+  font-size: 18px;
+  color: #222;
+  padding: 8px 12px;
+  font-weight: 500;
   text-decoration: none;
-  transition: color 0.15s ease-in-out; /* Smooth color transition on hover */
-  white-space: nowrap; /* Prevents text from wrapping */
+  transition: color 0.15s ease-in-out;
+  white-space: nowrap;
 }
 
 .navigation_links:hover {
-  color: var(--primary-color) !important; /* Hover color */
+  color: #516cf0;
 }
 
-/* Specific styling for the Login button */
 .login_btn {
-  padding: 10px 20px !important;
-  color: white !important;
-  background-color: var(
-    --blue-main
-  ) !important; /* Main blue for login button */
-  border-radius: 4px;
-  display: flex; /* For potential icon alignment if added later */
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap; /* Prevent text wrapping */
-}
-
-.login_btn:hover {
-  background-color: var(--blue-shade) !important; /* Darker blue on hover */
-}
-
-/* Styling for the Logout button */
-.logout_btn {
-  background-color: var(--blue-main); /* Main blue for logout button */
+  padding: 10px 20px;
   color: white;
-  border: none;
+  background-color: #516cf0;
   border-radius: 4px;
-  padding: 8px 12px; /* Compact padding */
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  transition: background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  display: flex; /* Enables flexbox for icon alignment */
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap; /* Prevents "Logout" from wrapping */
-  /* Margin for desktop spacing */
-  margin-left: 10px;
-}
-
-.logout_btn:hover {
-  background-color: var(--blue-shade); /* Darker blue on hover */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow on hover */
-}
-
-/* Styling for the Profile Icon link (circle containing user's initial or icon) */
-.profile_icon_link {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%; /* Makes it a perfect circle */
-  background-color: var(
-    --blue-shade
-  ); /* Darker blue for the circle background */
-  color: white !important;
-  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px; /* For initial if no icon used, but icon size overrides */
-  text-decoration: none !important; /* Removes underline from link */
-  flex-shrink: 0; /* Prevents the item from shrinking on smaller screens */
-  /* Margin for desktop spacing */
+  white-space: nowrap;
+}
+
+.login_btn:hover {
+  background-color: #7186ef;
+}
+
+.logout_btn {
+  padding: 10px 20px;
+  color: #fff;
+  background-color: #dc3545;
+  border-radius: 4px;
   margin-left: 10px;
-  overflow: hidden; /* Ensures profile picture stays within the circle */
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.logout_btn:hover {
+  background-color: #b52a37;
+}
+
+.profile_icon_link {
+  margin-left: 10px;
+  color: #516cf0;
+  font-size: 1.7rem;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
 }
 
 .profile_icon_link:hover {
-  background-color: var(--blue-main); /* Lighter blue on hover */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow on hover */
-}
-
-/* Profile picture styles */
-.profile_picture {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
+  color: #7186ef;
 }
 
 .profile_picture_placeholder {
-  width: 100%;
-  height: 100%;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--blue-main), var(--blue-shade));
+  background: linear-gradient(135deg, #516cf0, #7186ef);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -170,43 +104,37 @@
   color: white;
 }
 
-/* Spacing for icons within buttons */
 .icon_space {
-  margin-right: 5px; /* Adds space between the icon and text */
+  margin-right: 5px;
 }
 
-/* Media queries for smaller screens (mobile responsiveness) */
 @media (max-width: 767px) {
-  /* Applies to screens smaller than 768px */
+  .nav_links_holder {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
   .logout_btn {
-    width: auto; /* Allow content to dictate width */
-    margin-left: 0; /* Remove left margin when stacking vertically */
-    margin-top: 10px; /* Add top margin for vertical spacing */
-    text-align: center; /* Center text/icon in mobile button */
+    width: auto;
+    margin-left: 0;
+    margin-top: 10px;
+    text-align: center;
   }
-
   .profile_icon_link {
-    margin-left: 0; /* Remove left margin when stacking vertically */
-    margin-top: 10px; /* Add top margin for vertical spacing */
+    margin-left: 0;
+    margin-top: 10px;
   }
-
   .navigation_links {
-    text-align: center; /* Center nav links in mobile */
-    width: 100%; /* Make nav links full width in mobile */
-    margin-left: 0; /* Remove left margin on mobile nav links */
-  }
-
-  .dark_mode_toggle_container {
-    margin: 10px 0;
+    text-align: center;
+    width: 100%;
+    margin-left: 0;
   }
 }
 
-/* Extra small screens */
 @media (max-width: 480px) {
   .header_container {
-    width: 95% !important;
+    width: 95%;
   }
-  
   .navbar_custom {
     padding-left: 0.5rem;
     padding-right: 0.5rem;
