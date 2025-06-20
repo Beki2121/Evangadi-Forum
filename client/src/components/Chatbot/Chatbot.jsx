@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect, forwardRef, useContext } from "react"; // Import forwardRef and useContext
+import React, { useState, useRef, useEffect, forwardRef } from "react"; // Import forwardRef
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 import styles from "./Chatbot.module.css";
-import { UserState } from "../../App.jsx"; // Import UserState context
 
 // Import icons from react-icons
 import {
@@ -16,18 +15,21 @@ import {
 // Wrap the Chatbot component with forwardRef
 const Chatbot = forwardRef((props, ref) => {
   // Accept props and ref as arguments
-  const { user } = useContext(UserState); // Get user from context
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  // const [loading, setLoading] = useState(false); // COMMENTED OUT
+  const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(null);
-  const [currentView, setCurrentView] = useState("chat");
+  const [currentView, setCurrentView] = useState("chat"); // 'chat' or 'historyList'
   const [chatSessions, setChatSessions] = useState([]);
+
+  // Use a different ref name internally if you still need to scroll,
+  // or use the forwarded 'ref' for scrolling if it points to the messagesContainer.
+  // For now, let's keep messagesEndRef for internal scrolling.
   const messagesEndRef = useRef(null);
-  const API_CHAT_URL = "https://server.evangadiforum.com/api/ai/chat";
-  const API_HISTORY_URL = "https://server.evangadiforum.com/api/ai/history";
-  const API_ALL_SESSIONS_URL =
-    "https://server.evangadiforum.com/api/ai/sessions";
+
+  const API_CHAT_URL = "http://localhost:5000/api/ai/chat";
+  const API_HISTORY_URL = "http://localhost:5000/api/ai/history";
+  const API_ALL_SESSIONS_URL = "http://localhost:5000/api/ai/sessions";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,10 +46,11 @@ const Chatbot = forwardRef((props, ref) => {
     setSessionId(currentSession);
 
     const loadCurrentSessionHistory = async () => {
-      if (currentSession && user?.userid) {
+      if (currentSession) {
+        setLoading(true);
         try {
           const response = await axios.get(
-            `${API_HISTORY_URL}?sessionId=${currentSession}&userid=${user.userid}`
+            `${API_HISTORY_URL}?sessionId=${currentSession}`
           );
           // const response = await api.get(
           //   `/history?sessionId=${currentSession}`
@@ -70,12 +73,14 @@ const Chatbot = forwardRef((props, ref) => {
               parts: "Error loading previous chat. Starting fresh.",
             },
           ]);
+        } finally {
+          setLoading(false);
         }
       }
     };
 
     loadCurrentSessionHistory();
-  }, [user]); // Add user as dependency
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -83,17 +88,18 @@ const Chatbot = forwardRef((props, ref) => {
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim() || !sessionId || !user?.userid) return;
+    if (!input.trim() || loading || !sessionId) return;
 
     const userMessage = { role: "user", parts: input.trim() };
     setMessages((prevMessages) => [...prevMessages, userMessage]);
     setInput("");
+    setLoading(true);
 
     try {
       const response = await axios.post(API_CHAT_URL, {
         message: userMessage.parts,
         sessionId: sessionId,
-        userid: user.userid,
+        // userId: YOUR_USER_ID_HERE, // Pass actual user ID if available
       });
       // const response = await api.post("/chat", {
       //   message: userMessage.parts,
@@ -111,6 +117,8 @@ const Chatbot = forwardRef((props, ref) => {
           parts: "Error: Could not get a response. Please try again.",
         },
       ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,14 +134,15 @@ const Chatbot = forwardRef((props, ref) => {
   };
 
   const fetchAllChatSessions = async () => {
-    if (!user?.userid) return;
-    
+    setLoading(true);
     try {
-      const response = await axios.get(`${API_ALL_SESSIONS_URL}?userid=${user.userid}`);
+      const response = await axios.get(API_ALL_SESSIONS_URL); // Add ?userId=${YOUR_USER_ID_HERE} if filtering
       setChatSessions(response.data.sessions);
     } catch (error) {
       console.error("Error fetching chat sessions:", error);
       setChatSessions([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -143,10 +152,11 @@ const Chatbot = forwardRef((props, ref) => {
   };
 
   const loadSpecificChat = async (selectedSessionId) => {
-    if (!selectedSessionId || !user?.userid) return;
+    if (!selectedSessionId) return;
+    setLoading(true);
     try {
       const response = await axios.get(
-        `${API_HISTORY_URL}?sessionId=${selectedSessionId}&userid=${user.userid}`
+        `${API_HISTORY_URL}?sessionId=${selectedSessionId}`
       );
       if (response.data.history) {
         setMessages(response.data.history);
@@ -162,6 +172,8 @@ const Chatbot = forwardRef((props, ref) => {
           parts: `Error loading chat for session ${selectedSessionId}.`,
         },
       ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -192,7 +204,7 @@ const Chatbot = forwardRef((props, ref) => {
       {currentView === "chat" && (
         <>
           <div className={styles.messagesContainer}>
-            {messages.length === 0 && (
+            {messages.length === 0 && !loading && (
               <div className={styles.welcomeMessage}>
                 Hi there! How can I help you today?
               </div>
@@ -207,6 +219,9 @@ const Chatbot = forwardRef((props, ref) => {
                 {msg.parts}
               </div>
             ))}
+            {loading && (
+              <div className={styles.loadingMessage}>Thinking...</div>
+            )}
             <div ref={messagesEndRef} />
           </div>
           <form onSubmit={sendMessage} className={styles.inputContainer}>
@@ -216,10 +231,12 @@ const Chatbot = forwardRef((props, ref) => {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type your message..."
               className={styles.inputField}
+              disabled={loading}
             />
             <button
               type="submit"
               className={styles.sendButton}
+              disabled={loading}
             >
               <FiSend className={styles.sendIcon} />
             </button>
@@ -230,7 +247,9 @@ const Chatbot = forwardRef((props, ref) => {
       {currentView === "historyList" && (
         <div className={styles.historyListContainer}>
           <h2>Your Chat Sessions</h2>
-          {chatSessions.length === 0 ? (
+          {loading ? (
+            <p className={styles.loadingText}>Loading sessions...</p>
+          ) : chatSessions.length === 0 ? (
             <p className={styles.noHistoryText}>
               No chat sessions found. Start a new chat to create one.
             </p>
