@@ -37,7 +37,9 @@ function AskQuestion() {
           title: "Success!",
           text: "Question created successfully!",
           icon: "success",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
         navigate("/");
       } else {
@@ -46,7 +48,9 @@ function AskQuestion() {
           title: "Error",
           text: "Failed to create question",
           icon: "error",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
       }
     } catch (error) {
@@ -55,7 +59,9 @@ function AskQuestion() {
         title: "Error",
         text: "Failed to create question. Please try again later.",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   }

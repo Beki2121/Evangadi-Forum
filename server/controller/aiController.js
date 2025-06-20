@@ -13,7 +13,7 @@ const SUPPORTED_MODELS = [
 ];
 
 // Use a currently supported model. You can switch as needed via .env
-const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-pro";
 const API_KEY = process.env.GEMINI_API_KEY;
 
 // --- Backend Initialization Logs ---
@@ -51,11 +51,11 @@ async function saveMessageToDb(sessionId, userid, role, content) {
   }
 }
 
-async function loadHistoryFromDb(sessionId) {
+async function loadHistoryFromDb(sessionId, userid) {
   try {
     const [rows] = await dbConnection.execute(
-      `SELECT role, content FROM chat_history WHERE session_id = ? ORDER BY timestamp ASC`,
-      [sessionId]
+      `SELECT role, content FROM chat_history WHERE session_id = ? AND userid = ? ORDER BY timestamp ASC`,
+      [sessionId, userid]
     );
     return rows.map((row) => ({
       role: row.role,
@@ -89,22 +89,88 @@ async function chatWithAI(req, res) {
   try {
     await saveMessageToDb(sessionId, userid, "user", message);
 
-    const loadedHistory = await loadHistoryFromDb(sessionId);
+    const loadedHistory = await loadHistoryFromDb(sessionId, userid);
+
+    // Limit the history to prevent input token limits from affecting output
+    const limitedHistory = loadedHistory.slice(-10); // Keep only last 10 messages
 
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    const chat = model.startChat({
-      history: loadedHistory,
-      generationConfig: {
-        maxOutputTokens: 200,
-      },
-    });
+    // Try using generateContent with streaming for potentially longer responses
+    const prompt = `You are a helpful AI assistant. The user is asking for creative writing or storytelling. Please provide a detailed, complete response that is at least 500-1000 words long. Make sure to finish your thoughts completely and do not cut off mid-sentence.
 
-    const result = await chat.sendMessage([{ text: message }]);
-    const response = await result.response;
-    const aiText = response.text();
+User message: ${message}
 
-    await saveMessageToDb(sessionId, userid, "model", aiText);
+Previous conversation context:
+${limitedHistory.map(msg => `${msg.role}: ${msg.parts[0].text}`).join('\n')}
+
+IMPORTANT: Provide a complete, detailed response that finishes properly. Do not stop mid-sentence.`;
+
+    console.log("Input prompt length:", prompt.length);
+    console.log("History messages count:", limitedHistory.length);
+
+    // Try streaming approach to get full response
+    try {
+      const result = await model.generateContentStream({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: 8192,
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          candidateCount: 1,
+        },
+      });
+      
+      let aiText = "";
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        aiText += chunkText;
+      }
+
+      if (!aiText || aiText.trim().length === 0) {
+        throw new Error("Empty response received from AI model");
+      }
+
+      console.log("AI Response length:", aiText.length);
+      console.log("AI Response preview:", aiText.substring(0, 200) + "...");
+      console.log("AI Response full:", aiText);
+      console.log("Response finish reason:", result.response?.responseMetadata?.finishReason);
+      console.log("Response safety ratings:", result.response?.responseMetadata?.safetyRatings);
+
+      await saveMessageToDb(sessionId, userid, "model", aiText);
+    } catch (streamError) {
+      console.log("Streaming failed, trying regular generateContent:", streamError.message);
+      
+      // Fallback to regular generateContent
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: 8192,
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+          candidateCount: 1,
+        },
+      });
+      
+      if (!result || !result.response) {
+        throw new Error("No response received from AI model");
+      }
+      
+      const response = await result.response;
+      const aiText = response.text();
+
+      if (!aiText || aiText.trim().length === 0) {
+        throw new Error("Empty response received from AI model");
+      }
+
+      console.log("AI Response length (fallback):", aiText.length);
+      console.log("AI Response preview (fallback):", aiText.substring(0, 200) + "...");
+      console.log("AI Response full (fallback):", aiText);
+
+      await saveMessageToDb(sessionId, userid, "model", aiText);
+    }
 
     console.log("AI Reply received successfully.");
 
@@ -119,7 +185,7 @@ async function chatWithAI(req, res) {
 }
 
 async function getChatHistory(req, res) {
-  const { sessionId } = req.query;
+  const { sessionId, userid } = req.query;
 
   if (!sessionId) {
     return res
@@ -127,10 +193,16 @@ async function getChatHistory(req, res) {
       .json({ msg: "Session ID is required to fetch history." });
   }
 
+  if (!userid) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ msg: "User ID is required to fetch history." });
+  }
+
   try {
     const [rows] = await dbConnection.execute(
-      `SELECT role, content FROM chat_history WHERE session_id = ? ORDER BY timestamp ASC`,
-      [sessionId]
+      `SELECT role, content FROM chat_history WHERE session_id = ? AND userid = ? ORDER BY timestamp ASC`,
+      [sessionId, userid]
     );
     const historyForFrontend = rows.map((row) => ({
       role: row.role,
@@ -147,6 +219,14 @@ async function getChatHistory(req, res) {
 }
 
 async function getAllChatSessions(req, res) {
+  const { userid } = req.query;
+
+  if (!userid) {
+    return res
+      .status(StatusCodes.BAD_REQUEST)
+      .json({ msg: "User ID is required to fetch chat sessions." });
+  }
+
   try {
     let query = `
       SELECT
@@ -154,10 +234,11 @@ async function getAllChatSessions(req, res) {
         MAX(timestamp) AS last_updated_at,
         SUBSTRING_INDEX(GROUP_CONCAT(CASE WHEN role = 'user' THEN content END ORDER BY timestamp ASC), ',', 1) AS first_user_message
       FROM chat_history
+      WHERE userid = ?
       GROUP BY session_id
       ORDER BY last_updated_at DESC
     `;
-    let params = [];
+    let params = [userid];
 
     const [rows] = await dbConnection.execute(query, params);
 

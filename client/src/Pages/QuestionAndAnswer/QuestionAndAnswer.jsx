@@ -18,7 +18,7 @@ function QuestionAndAnswer() {
   const { user } = useContext(UserState);
   const userid = user?.userid; // Ensure userid is correctly derived from context
   const { questionId } = useParams();
-  const [loading, setLoading] = useState(true); // Initial state for loading
+  // const [loading, setLoading] = useState(true); // Initial state for loading - COMMENTED OUT
   const [expandedAnswer, setExpandedAnswer] = useState(null); // State to track expanded answers
   const answerInput = useRef();
   const [editingAnswerId, setEditingAnswerId] = useState(null);
@@ -32,15 +32,17 @@ function QuestionAndAnswer() {
       // Also, assuming questionDetails will now have a 'solution_answer_id' if one is marked.
       const res = await axiosInstance.get(`/question/${questionId}`);
       setQuestionDetails(res.data);
-      setLoading(false);
+      // setLoading(false); // COMMENTED OUT
     } catch (error) {
       console.error("Error fetching question and answers:", error);
-      setLoading(false); // Stop loading even if there's an error
+      // setLoading(false); // Stop loading even if there's an error - COMMENTED OUT
       Swal.fire({
         title: "Error",
         text: "Failed to load question and answers. Please try again.",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   };
@@ -59,7 +61,9 @@ function QuestionAndAnswer() {
         title: "Input Required",
         text: "Please enter an answer before submitting.",
         icon: "warning",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -70,7 +74,9 @@ function QuestionAndAnswer() {
         title: "Authentication Required",
         text: "You must be logged in to post an answer.",
         icon: "warning",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -95,17 +101,20 @@ function QuestionAndAnswer() {
           title: "Success!",
           text: "Answer submitted successfully!",
           icon: "success",
-          confirmButtonText: "OK",
-        }).then(() => {
-          answerInput.current.value = ""; // Clear the input field
-          fetchQuestionAndAnswers(); // Re-fetch data to show the new answer and updated ratings
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
+        answerInput.current.value = ""; // Clear the input field
+        fetchQuestionAndAnswers(); // Re-fetch data to show the new answer and updated ratings
       } else {
         Swal.fire({
           title: "Error",
           text: response.data.message || "Failed to post answer.",
           icon: "error",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
       }
     } catch (error) {
@@ -117,7 +126,9 @@ function QuestionAndAnswer() {
           error.response?.data?.message ||
           "Failed to post answer. Please try again later.",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   }
@@ -130,7 +141,9 @@ function QuestionAndAnswer() {
         title: "Authentication Required",
         text: "You must be logged in to rate an answer.",
         icon: "warning",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -159,7 +172,9 @@ function QuestionAndAnswer() {
           title: "Rating Error",
           text: response.data.msg || "Failed to submit rating.",
           icon: "error",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
       }
     } catch (error) {
@@ -170,7 +185,9 @@ function QuestionAndAnswer() {
           error.response?.data?.msg ||
           "Failed to submit rating. Please try again later.",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   }
@@ -183,7 +200,9 @@ function QuestionAndAnswer() {
         title: "Authentication Required",
         text: "You must be logged in to mark an answer as a solution.",
         icon: "warning",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -220,16 +239,19 @@ function QuestionAndAnswer() {
           title: "Success!",
           text: "Answer marked as solution successfully!",
           icon: "success",
-          confirmButtonText: "OK",
-        }).then(() => {
-          fetchQuestionAndAnswers(); // Re-fetch to update UI with solution marker
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
+        fetchQuestionAndAnswers(); // Re-fetch to update UI with solution marker
       } else {
         Swal.fire({
           title: "Error",
           text: response.data.msg || "Failed to mark answer as solution.",
           icon: "error",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
       }
     } catch (error) {
@@ -240,7 +262,9 @@ function QuestionAndAnswer() {
           error.response?.data?.msg ||
           "Failed to mark answer as solution. Please try again later.",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   }
@@ -276,7 +300,7 @@ function QuestionAndAnswer() {
     }
   };
 
-  if (loading) {
+  if (/* loading */ false) {
     return (
       <Layout>
         <div className={styles.loadingContainer}>
@@ -432,7 +456,7 @@ function QuestionAndAnswer() {
                       >
                         <FaThumbsUp size={20} />
                       </button>
-                      <span className={styles.ratingCount}>{answer?.rating_count || 0}</span>
+                      <span className={styles.upvoteCount}>{answer?.upvote_count || 0}</span>
                       <button
                         className={styles.ratingButton}
                         onClick={(e) => {
@@ -443,6 +467,7 @@ function QuestionAndAnswer() {
                       >
                         <FaThumbsDown size={20} />
                       </button>
+                      <span className={styles.downvoteCount}>{answer?.downvote_count || 0}</span>
                       {isQuestionOwner && !solutionAnswerId && (
                         <button
                           className={styles.markSolutionButton}

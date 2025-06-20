@@ -236,3 +236,15 @@ transition: all ease-in-out .5s;
   font-size: 1.1em;
   color: var(--dark-grey); /* Or any color you prefer */
 }
+
+.upvoteCount {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #28a745; /* Green color for upvotes */
+}
+
+.downvoteCount {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #dc3545; /* Red color for downvotes */
+}

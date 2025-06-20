@@ -42,6 +42,7 @@ async function authMiddleware(req, res, next) {
     // Verify the token
     const decoded = jwt.verify(token, secret);
     console.log("AuthMiddleware: Successfully decoded JWT payload:", decoded); // Log the full decoded payload
+    console.log("AuthMiddleware: avatar_url in token:", decoded.avatar_url); // Debug avatar_url specifically
 
     let extractedUsername = decoded.username;
     let extracteduserid = decoded.userid || decoded.id;
@@ -67,9 +68,13 @@ async function authMiddleware(req, res, next) {
     if (decoded.avatar_url) {
       // Check if avatar_url exists directly in decoded payload
       req.user.avatar_url = decoded.avatar_url;
+      console.log("AuthMiddleware: Found avatar_url in token:", decoded.avatar_url);
     } else if (decoded.user && decoded.user.avatar_url) {
       // Check if it's nested under 'user'
       req.user.avatar_url = decoded.user.avatar_url;
+      console.log("AuthMiddleware: Found avatar_url in token.user:", decoded.user.avatar_url);
+    } else {
+      console.log("AuthMiddleware: No avatar_url found in token");
     }
 
     console.log("AuthMiddleware: User authenticated:", req.user);

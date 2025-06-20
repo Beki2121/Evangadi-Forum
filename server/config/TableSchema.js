@@ -34,6 +34,8 @@ async function initializeDatabase() {
         answer TEXT NOT NULL,
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
         rating_count INT DEFAULT 0,
+        upvote_count INT DEFAULT 0,
+        downvote_count INT DEFAULT 0,
         -- FOREIGN KEY(questionid) REFERENCES questions(questionid) ON DELETE CASCADE -- This FK will be added later or carefully managed if questions table is created first
         FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE
       ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -206,6 +208,10 @@ async function initializeDatabase() {
       "avatar_url",
       "VARCHAR(2048) DEFAULT NULL"
     );
+
+    // Answers table new columns for separate vote counts
+    await addColumnIfNotExists("answers", "upvote_count", "INT DEFAULT 0");
+    await addColumnIfNotExists("answers", "downvote_count", "INT DEFAULT 0");
 
     // Questions table new columns (solution_answer_id)
     await addColumnIfNotExists(

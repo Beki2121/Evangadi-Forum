@@ -64,7 +64,9 @@ const VerifyEmail = () => {
           icon: "error",
           title: "Verification Failed",
           text: errorMsg,
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
       }
     };
@@ -78,7 +80,9 @@ const VerifyEmail = () => {
         icon: "error",
         title: "Missing Token",
         text: "No verification token found in the URL.",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
 

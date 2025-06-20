@@ -440,11 +440,37 @@ async function resetPassword(req, res) {
 async function check(req, res) {
   const username = req.user.username;
   const userid = req.user.userid;
-  const avatar_url = req.user.avatar_url; // Ensure avatar_url is part of your JWT payload
+  
+  console.log("Check function: req.user =", req.user);
 
-  return res
-    .status(StatusCodes.OK)
-    .json({ user: { username, userid, avatar_url } });
+  try {
+    // Fetch fresh user data from database to get current avatar_url
+    const [users] = await dbConnection.query(
+      "SELECT userid, username, avatar_url FROM users WHERE userid = ?",
+      [userid]
+    );
+
+    if (users.length === 0) {
+      return res.status(StatusCodes.NOT_FOUND).json({
+        msg: "User not found.",
+      });
+    }
+
+    const userData = users[0];
+    const avatar_url = userData.avatar_url;
+
+    console.log("Check function: Fresh user data from DB:", userData);
+    console.log("Check function: Current avatar_url =", avatar_url);
+
+    return res
+      .status(StatusCodes.OK)
+      .json({ user: { username, userid, avatar_url } });
+  } catch (error) {
+    console.error("Error in check function:", error);
+    return res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ msg: "Internal server error." });
+  }
 }
 
 async function getUserProfileById(req, res) {

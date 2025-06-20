@@ -19,24 +19,27 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   // user state will hold the authenticated user's data (e.g., { userid, username, email, avatar_url })
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // To indicate if auth state is being loaded
+  // const [loading, setLoading] = useState(true); // To indicate if auth state is being loaded - COMMENTED OUT
   const [authReady, setAuthReady] = useState(false); // New state to indicate when auth check is complete
 
   // Function to check user's login status (e.g., via token in localStorage)
   const checkAuthStatus = useCallback(async () => {
-    setLoading(true);
+    // setLoading(true); // COMMENTED OUT
     const token = localStorage.getItem("token"); // Assuming JWT token is stored here
 
     if (token) {
       try {
         // Call your backend to verify the token and get user details
-        const response = await fetch("http://localhost:5000/api/check-user", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await fetch(
+          "https://server.evangadiforum.com/api/check-user",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (response.ok) {
           const data = await response.json();
@@ -52,12 +55,12 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem("token");
         setUser(null);
       } finally {
-        setLoading(false); // Mark loading as complete
+        // setLoading(false); // Mark loading as complete - COMMENTED OUT
         setAuthReady(true); // Mark auth as ready
       }
     } else {
       setUser(null);
-      setLoading(false); // Mark loading as complete
+      // setLoading(false); // Mark loading as complete - COMMENTED OUT
       setAuthReady(true); // Mark auth as ready (even if no token)
     }
   }, []);
@@ -65,13 +68,16 @@ export const AuthProvider = ({ children }) => {
   // Function to handle user login
   const login = async (email, password) => {
     try {
-      const response = await fetch("http://localhost:5000/api/v1/user/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        "https://server.evangadiforum.com/api/v1/user/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       const data = await response.json();
 
@@ -111,7 +117,7 @@ export const AuthProvider = ({ children }) => {
   // The value provided to consumers of this context
   const authContextValue = {
     user,
-    loading, // Expose loading state
+    // loading, // Expose loading state - COMMENTED OUT
     authReady, // Expose authReady state
     login,
     logout,

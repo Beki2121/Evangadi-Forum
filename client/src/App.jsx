@@ -5,13 +5,39 @@ import { axiosInstance } from "./utility/axios";
 import AppRouter from "./routes/AppRouter.jsx";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { BrowserRouter as Router } from "react-router-dom";
 
 <ToastContainer position="top-right" autoClose={3000} />;
 export const UserState = createContext();
+export const DarkModeContext = createContext();
 
 function App() {
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Load dark mode preference from localStorage on app start
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem("darkMode");
+    if (savedDarkMode !== null) {
+      setDarkMode(JSON.parse(savedDarkMode));
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setDarkMode(prefersDark);
+    }
+  }, []);
+
+  // Save dark mode preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem("darkMode", JSON.stringify(darkMode));
+    // Apply dark mode class to body
+    if (darkMode) {
+      document.body.classList.add("dark-mode");
+    } else {
+      document.body.classList.remove("dark-mode");
+    }
+  }, [darkMode]);
 
   const login = (userData, token) => {
     localStorage.setItem("token", token);
@@ -27,12 +53,36 @@ function App() {
     delete axiosInstance.defaults.headers.common["Authorization"];
   };
 
+  const refreshUserData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setUser(null);
+        return;
+      }
+
+      axiosInstance.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      const response = await axiosInstance.get("/user/check");
+      const userData = response.data.user;
+      console.log("App.jsx: Refreshed user data:", userData);
+      setUser(userData);
+    } catch (error) {
+      console.error("App.jsx: Error refreshing user data:", error);
+      setUser(null);
+      localStorage.removeItem("token");
+      localStorage.removeItem("EV-Forum-user");
+      delete axiosInstance.defaults.headers.common["Authorization"];
+    }
+  };
+
   const getUserData = async () => {
     setLoadingUser(true);
     try {
       const token = localStorage.getItem("token");
+      console.log("App.jsx: Token from localStorage:", token ? "Exists" : "Not found");
 
       if (!token) {
+        console.log("App.jsx: No token found, setting user to null");
         setUser(null);
         return;
       }
@@ -41,17 +91,21 @@ function App() {
         "Authorization"
       ] = `Bearer ${token}`;
 
+      console.log("App.jsx: Making request to /user/check");
       const response = await axiosInstance.get("/user/check");
+      console.log("App.jsx: Response from /user/check:", response.data);
+      
       // --- IMPORTANT FIX START ---
       // The API returns { user: { username, userid } }.
       // We need to extract the inner 'user' object.
       const userData = response.data.user;
       // --- IMPORTANT FIX END ---
 
-      console.log("Fetched user data:", userData); // This will now log the direct user object
+      console.log("App.jsx: Extracted user data:", userData); // This will now log the direct user object
       setUser(userData);
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      console.error("App.jsx: Error fetching user data:", error);
+      console.error("App.jsx: Error response:", error.response?.data);
       setUser(null);
       localStorage.removeItem("token");
       localStorage.removeItem("EV-Forum-user");
@@ -59,6 +113,10 @@ function App() {
     } finally {
       setLoadingUser(false);
     }
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
   };
 
   useEffect(() => {
@@ -70,9 +128,13 @@ function App() {
   }
 
   return (
-    <UserState.Provider value={{ user, setUser, login, logout }}>
-      <AppRouter />
-    </UserState.Provider>
+    <DarkModeContext.Provider value={{ darkMode, toggleDarkMode }}>
+      <UserState.Provider value={{ user, setUser, login, logout, refreshUserData, loadingUser }}>
+        <Router>
+          <AppRouter />
+        </Router>
+      </UserState.Provider>
+    </DarkModeContext.Provider>
   );
 }
 

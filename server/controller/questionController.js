@@ -100,6 +100,8 @@ async function getQuestionAndAnswer(req, res) {
           a.answer,
           a.createdAt,
           a.rating_count,
+          a.upvote_count,
+          a.downvote_count,
           u.username AS answer_username
         FROM answers a
         INNER JOIN users u ON a.userid = u.userid
@@ -116,6 +118,8 @@ async function getQuestionAndAnswer(req, res) {
       answer: answer.answer,
       createdAt: answer.createdAt,
       rating_count: answer.rating_count,
+      upvote_count: answer.upvote_count,
+      downvote_count: answer.downvote_count,
     }));
 
     res.status(StatusCodes.OK).json(questionDetails);

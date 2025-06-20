@@ -13,6 +13,7 @@
   --body-text-font: "Poppins";
   --decorative-text: "dancing script";
 }
+
 * {
   padding: 0;
   margin: 0;
@@ -28,4 +29,45 @@ h4,
 h5,
 h6 {
   font-family: var(--header-font), sans-serif !important;
+}
+
+/* Dark mode overrides for existing color variables */
+.dark-mode {
+  --primary-color: #ff9f1c;
+  --primary-shade: #ffb347;
+  --blue-main: #4a90e2;
+  --blue-shade: #357abd;
+  --green-success: #2ecc71;
+  --red-error: #e74c3c;
+  --yellow-warning: #f39c12;
+  --info-blue: #3498db;
+}
+
+/* Ensure smooth transitions for all elements */
+* {
+  transition: background-color var(--transition-normal, 0.3s ease), 
+              color var(--transition-normal, 0.3s ease), 
+              border-color var(--transition-normal, 0.3s ease),
+              box-shadow var(--transition-normal, 0.3s ease);
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+  * {
+    font-size: 14px;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-size: 1.2em;
+  }
+}
+
+@media (max-width: 480px) {
+  * {
+    font-size: 12px;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-size: 1.1em;
+  }
 }

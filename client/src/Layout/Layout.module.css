@@ -11,14 +11,15 @@
   color: white;
   padding: 10px 15px; /* Padding around text and icon */
   border-radius: 25px; /* Pill shape */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease-in-out;
+  box-shadow: var(--shadow-medium);
+  transition: all var(--transition-normal);
   z-index: 1000; /* Ensure it stays on top of other content */
 }
 
 .chatbotToggleArea:hover {
   transform: translateY(-3px); /* Slight lift on hover */
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-heavy);
+  background-color: var(--blue-shade);
 }
 
 .askChatbotText {
@@ -50,7 +51,7 @@
 
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  transition: opacity var(--transition-normal), transform var(--transition-normal);
   transform: translateY(20px);
 }
 
@@ -119,5 +120,31 @@
     bottom: 80px; /* Adjust position */
     max-height: 70vh; /* Max height relative to viewport */
     /* Adjust width/height here if necessary for smaller screens, but let Chatbot.module.css handle internal sizing */
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .chatbotToggleArea {
+    bottom: 15px;
+    right: 15px;
+    padding: 6px 10px;
+    border-radius: 18px;
+  }
+
+  .askChatbotText {
+    font-size: 0.8rem;
+  }
+
+  .chatbotIcon {
+    font-size: 1.3rem;
+  }
+
+  .chatbotColumn {
+    width: 95%;
+    left: 2.5%;
+    right: 2.5%;
+    bottom: 70px;
+    max-height: 75vh;
   }
 }

@@ -3,10 +3,17 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  background-color: white;
-  border-bottom: 1px solid #dee2e6;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
   padding-left: 1rem; /* Equivalent to Bootstrap's px-3 */
   padding-right: 1rem; /* Equivalent to Bootstrap's px-3 */
+  transition: background-color var(--transition-normal), border-color var(--transition-normal);
+}
+
+/* Dark mode styles for navbar */
+.navbar_custom.dark_mode {
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* Styles for the Container inside the Navbar */
@@ -45,10 +52,24 @@
   }
 }
 
+/* Dark mode toggle container */
+.dark_mode_toggle_container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+@media (min-width: 768px) {
+  .dark_mode_toggle_container {
+    margin: 0 10px;
+  }
+}
+
 /* Styles for individual navigation links */
 .navigation_links {
   font-size: 18px !important;
-  color: black !important; /* Uses the darker blue shade */
+  color: var(--text-color) !important;
   padding: 8px 12px; /* Reduced padding for a more compact look */
   font-weight: 500 !important;
   text-decoration: none;
@@ -120,11 +141,33 @@
   flex-shrink: 0; /* Prevents the item from shrinking on smaller screens */
   /* Margin for desktop spacing */
   margin-left: 10px;
+  overflow: hidden; /* Ensures profile picture stays within the circle */
 }
 
 .profile_icon_link:hover {
   background-color: var(--blue-main); /* Lighter blue on hover */
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow on hover */
+}
+
+/* Profile picture styles */
+.profile_picture {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.profile_picture_placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue-main), var(--blue-shade));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
 }
 
 /* Spacing for icons within buttons */
@@ -151,5 +194,21 @@
     text-align: center; /* Center nav links in mobile */
     width: 100%; /* Make nav links full width in mobile */
     margin-left: 0; /* Remove left margin on mobile nav links */
+  }
+
+  .dark_mode_toggle_container {
+    margin: 10px 0;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .header_container {
+    width: 95% !important;
+  }
+  
+  .navbar_custom {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }

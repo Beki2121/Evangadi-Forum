@@ -11,7 +11,7 @@ function EditQuestion() {
   const { user } = useContext(UserState);
   const { id: questionId } = useParams();
   const location = useLocation();
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false); // COMMENTED OUT
   const [question, setQuestion] = useState({ title: "", description: "", tag: "General" });
 
   const titleDom = useRef();
@@ -27,7 +27,7 @@ function EditQuestion() {
       });
     } else {
       // Fetch question details if not passed
-      setLoading(true);
+      // setLoading(true); // COMMENTED OUT
       axiosInstance.get(`/question/${questionId}`)
         .then(res => {
           setQuestion({
@@ -35,9 +35,11 @@ function EditQuestion() {
             description: res.data.description,
             tag: res.data.tag || "General",
           });
-          setLoading(false);
+          // setLoading(false); // COMMENTED OUT
         })
-        .catch(() => setLoading(false));
+        .catch(() => {
+          // setLoading(false); // COMMENTED OUT
+        });
     }
   }, [location.state, questionId]);
 
@@ -52,11 +54,13 @@ function EditQuestion() {
         title: "Authentication Required",
         text: "You must be logged in to edit a question.",
         icon: "warning",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
-    setLoading(true);
+    // setLoading(true); // COMMENTED OUT
     try {
       const response = await axiosInstance.put(
         `/question/${questionId}`,
@@ -68,7 +72,9 @@ function EditQuestion() {
           title: "Success!",
           text: "Question updated successfully!",
           icon: "success",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
         navigate(`/question/${questionId}`);
       } else {
@@ -76,7 +82,9 @@ function EditQuestion() {
           title: "Error",
           text: response.data.message || "Failed to update question",
           icon: "error",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
       }
     } catch (error) {
@@ -84,10 +92,12 @@ function EditQuestion() {
         title: "Error",
         text: error.response?.data?.message || "Failed to update question. Please try again later.",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
-    setLoading(false);
+    // setLoading(false); // COMMENTED OUT
   }
 
   return (
@@ -130,8 +140,9 @@ function EditQuestion() {
                   defaultValue={question.description}
                 />
                 <div className={classes.buttonContainer}>
-                  <button className={classes.question__button} type="submit" disabled={loading}>
-                    {loading ? "Saving..." : "Save Changes"}
+                  <button className={classes.question__button} type="submit">
+                    {/* {loading ? "Saving..." : "Save Changes"} */}
+                    Save Changes
                   </button>
                   <Link to="/">
                     <button className={classes.question__btn} type="button">

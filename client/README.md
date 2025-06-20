@@ -35,7 +35,7 @@ import EmojiPicker from "emoji-picker-react";
 import Loader from "../Loader/Loader.jsx"; // Assuming you have a loader component
 import Swal from "sweetalert2"; // For confirmations
 
-const SOCKET_SERVER_URL = "http://localhost:5000"; // IMPORTANT: Ensure your Socket.IO server is running on this URL
+const SOCKET_SERVER_URL = "https://server.evangadiforum.com"; // IMPORTANT: Ensure your Socket.IO server is running on this URL
 const PUBLIC_CHAT_ROOM_ID = "stackoverflow_lobby"; // Unique ID for the public chat room
 
 // Define common reaction emojis
@@ -1050,7 +1050,7 @@ faDownload,
 import Swal from "sweetalert2"; // For confirmations/alerts
 
 // Set up socket connection
-const socket = io("http://localhost:5000"); // Your backend server URL
+const socket = io("https://server.evangadiforum.com"); // Your backend server URL
 
 // Define the public chat room ID (should match backend)
 const PUBLIC_CHAT_ROOM_ID = "stackoverflow_lobby";
@@ -1181,7 +1181,7 @@ return; // Don't fetch if user isn't logged in
 const fetchAllUsers = useCallback(async () => {
 try {
 const token = localStorage.getItem("token");
-const response = await fetch("http://localhost:5000/api/v1/user/", {
+const response = await fetch("https://server.evangadiforum.com/api/v1/user/", {
 headers: {
 Authorization: `Bearer ${token}`,
 "Content-Type": "application/json",

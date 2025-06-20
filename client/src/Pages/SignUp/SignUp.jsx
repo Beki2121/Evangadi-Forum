@@ -63,7 +63,9 @@ function Signup({ onSwitch }) {
         title: "Error",
         text: "Please enter a valid first, last and username. Names should contain only letters and include at least two characters",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
 
@@ -73,7 +75,9 @@ function Signup({ onSwitch }) {
         title: "Weak Password",
         text: "Please create a stronger password: at least 8 characters with uppercase, lowercase, number, and special character.",
         icon: "warning",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
 
@@ -105,7 +109,9 @@ function Signup({ onSwitch }) {
           title: "Registration Successful!",
           text: "Please check your email to verify your account before logging in.",
           icon: "success",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
 
         setSuccess(
@@ -127,7 +133,9 @@ function Signup({ onSwitch }) {
           text:
             response.data.Msg || "Error submitting the form. Please try again.",
           icon: "error",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
         setSuccess(null);
       }
@@ -143,7 +151,9 @@ function Signup({ onSwitch }) {
           err.response?.data?.Msg ||
           "Error submitting the form. Please try again.",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       setSuccess(null);
     }

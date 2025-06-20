@@ -19,6 +19,9 @@ const ResetPassword = () => {
         icon: "warning",
         title: "Password Mismatch",
         text: "Passwords do not match.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -44,8 +47,9 @@ const ResetPassword = () => {
         icon: "success",
         title: "Password Reset!",
         text: response.data.msg || "Your password has been successfully reset.",
-        timer: 3000,
+        timer: 2000,
         timerProgressBar: true,
+        showConfirmButton: false,
       });
 
       setTimeout(() => navigate("/auth"), 2000);
@@ -56,6 +60,9 @@ const ResetPassword = () => {
         title: "Error",
         text:
           err.response?.data?.msg || "Something went wrong. Please try again.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   };

@@ -29,7 +29,9 @@ function QuestionCard({ id, userName, questionTitle, description, question_date,
         title: "Authentication Required",
         text: "You must be logged in to delete a question.",
         icon: "warning",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -55,29 +57,34 @@ function QuestionCard({ id, userName, questionTitle, description, question_date,
           });
           if (delRes.status === 200) {
             Swal.fire({
+              icon: "success",
               title: "Deleted!",
               text: "Your question has been deleted.",
-              icon: "success",
-              confirmButtonText: "OK",
-            }).then(() => {
-              window.location.reload(); // Reload to update list
+              timer: 2000,
+              timerProgressBar: true,
+              showConfirmButton: false,
             });
+            window.location.reload(); // Reload to update list
           } else {
             Swal.fire({
-              title: "Error",
-              text: delRes.data.message || "Failed to delete question.",
               icon: "error",
-              confirmButtonText: "OK",
+              title: "Error",
+              text: "Failed to delete question. Please try again.",
+              timer: 2000,
+              timerProgressBar: true,
+              showConfirmButton: false,
             });
           }
         }
       }
     } catch (error) {
       Swal.fire({
-        title: "Error",
-        text: error.response?.data?.message || "Failed to delete question.",
         icon: "error",
-        confirmButtonText: "OK",
+        title: "Error",
+        text: "Failed to delete question. Please try again.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   };

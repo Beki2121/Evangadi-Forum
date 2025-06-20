@@ -15,6 +15,9 @@ function ForgotPassword() {
         icon: "warning",
         title: "Missing Email",
         text: "Please enter your email address.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -37,8 +40,9 @@ function ForgotPassword() {
         icon: "success",
         title: "Email Sent!",
         text: res.data.msg || "A reset link has been sent to your email.",
-        timer: 4000,
+        timer: 2000,
         timerProgressBar: true,
+        showConfirmButton: false,
       });
 
       setEmail("");
@@ -49,6 +53,9 @@ function ForgotPassword() {
         icon: "error",
         title: "Error",
         text: err.response?.data?.msg || "Something went wrong. Try again.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   };

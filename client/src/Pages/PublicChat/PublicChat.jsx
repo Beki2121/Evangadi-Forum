@@ -237,6 +237,9 @@ const PublicChat = () => {
         icon: "error",
         title: "Connection Error",
         text: "Could not connect to the chat server. Please try again later.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     });
 
@@ -337,6 +340,9 @@ const PublicChat = () => {
         icon: "warning",
         title: "Login Required",
         text: "Please log in to send messages.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -434,6 +440,9 @@ const PublicChat = () => {
           icon: "error",
           title: "File Too Large",
           text: "Please select a file smaller than 5MB.",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
         setSelectedFile(null);
         event.target.value = null; // Clear the input
@@ -484,6 +493,9 @@ const PublicChat = () => {
         icon: "error",
         title: "Download Error",
         text: "Could not download the file.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   };
@@ -561,6 +573,9 @@ const PublicChat = () => {
         icon: "warning",
         title: "Recording in Progress",
         text: "Please stop the current recording before switching chat modes.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -569,6 +584,9 @@ const PublicChat = () => {
         icon: "warning",
         title: "Editing in Progress",
         text: "Please finish or cancel editing before switching chat modes.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -628,6 +646,9 @@ const PublicChat = () => {
         icon: "warning",
         title: "Login Required",
         text: "Please log in to send voice messages.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -636,6 +657,9 @@ const PublicChat = () => {
         icon: "warning",
         title: "File Attached",
         text: "Please clear the attached file before recording a voice message.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -644,6 +668,9 @@ const PublicChat = () => {
         icon: "warning",
         title: "Editing in Progress",
         text: "Please finish or cancel editing before recording a voice message.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       return;
     }
@@ -683,6 +710,9 @@ const PublicChat = () => {
         icon: "error",
         title: "Microphone Access Denied",
         text: "Please allow microphone access to send voice messages.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       setIsRecording(false);
       clearInterval(recordingIntervalRef.current);
@@ -753,6 +783,9 @@ const PublicChat = () => {
         icon: "error",
         title: "Audio Playback Error",
         text: "Could not play this audio message.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       setCurrentPlayingAudio(null);
       delete audioRefs.current[messageId];

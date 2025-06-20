@@ -7,7 +7,7 @@ import { UserState } from "../../App.jsx";
 
 function Question() {
   const [questions, setQuestions] = useState([]); // Store all questions
-  const [loading, setLoading] = useState(false); // Loader state
+  // const [loading, setLoading] = useState(false); // Loader state - COMMENTED OUT
   const [searchQuery, setSearchQuery] = useState(""); // Search query state
   const [currentPage, setCurrentPage] = useState(1); // Current page state
   const questionsPerPage = 5; // Number of questions per page
@@ -16,7 +16,7 @@ function Question() {
 
   // Fetch questions from API
   useEffect(() => {
-    setLoading(true);
+    // setLoading(true); // COMMENTED OUT
     axiosInstance
       .get("/questions")
       .then((res) => {
@@ -25,11 +25,11 @@ function Question() {
         setQuestions(res.data.message); // Set questions from API response
         // --- DEBUG STEP 2.2: Log the questions array after setting state ---
         console.log("Questions State after fetch:", res.data.message);
-        setLoading(false);
+        // setLoading(false); // COMMENTED OUT
       })
       .catch((error) => {
         console.error("Error fetching questions:", error); // Debug: Log any fetch errors
-        setLoading(false);
+        // setLoading(false); // COMMENTED OUT
       });
   }, []); // Empty dependency array ensures this runs only once on mount
 
@@ -122,9 +122,10 @@ function Question() {
       <h1 className={styles.title}>Questions</h1>
 
       {/* Display loader when loading */}
-      {loading ? (
+      {/* {loading ? (
         <Loader />
-      ) : filteredQuestions.length === 0 && searchQuery === "" ? ( // No results AND no search query
+      ) : */}
+      {filteredQuestions.length === 0 && searchQuery === "" ? ( // No results AND no search query
         <div
           style={{
             display: "flex",
@@ -194,6 +195,7 @@ function Question() {
           </div>
         </>
       )}
+      {/* )} */}
     </div>
   );
 }

@@ -7,21 +7,32 @@ import { UserCircle2, LogOut } from "lucide-react";
 
 import classes from "./header.module.css"; // Ensure this path is correct
 import EvangadiLogo from "../../Assets/Images/evangadi-logo-header.png";
-import { UserState } from "../../App.jsx"; // Assuming UserState is provided by App.jsx context
+import { UserState, DarkModeContext } from "../../App.jsx"; // Import DarkModeContext
+import DarkModeToggle from "../DarkModeToggle/DarkModeToggle.jsx"; // Import DarkModeToggle
 
 function Header() {
   const { user } = useContext(UserState);
+  const { darkMode } = useContext(DarkModeContext); // Get dark mode state
   const userid = user?.userid;
+
+  // Debug logging for avatar
+  console.log("Header: Current user state:", user);
+  console.log("Header: Avatar URL:", user?.avatar_url);
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
     window.location.replace("/auth");
   };
 
+  // Utility function to get user initial for avatar placeholder
+  const getUserInitial = (username) => {
+    return username ? username.charAt(0).toUpperCase() : "?";
+  };
+
   return (
     <Navbar
       expand="md" // Collapses on medium and smaller screens
-      className={classes.navbar_custom} // Apply custom styling to the Navbar itself
+      className={`${classes.navbar_custom} ${darkMode ? classes.dark_mode : ''}`} // Add dark mode class
     >
       <Container className={classes.header_container}>
         {/* Brand Logo */}
@@ -65,6 +76,11 @@ function Header() {
               How it Works
             </Nav.Link>
 
+            {/* Dark Mode Toggle - Always visible */}
+            <div className={classes.dark_mode_toggle_container}>
+              <DarkModeToggle />
+            </div>
+
             {/* Conditional rendering for authenticated vs. unauthenticated user */}
             {userid ? (
               // Authenticated user: Logout button and Profile Icon
@@ -78,7 +94,17 @@ function Header() {
                   className={classes.profile_icon_link} // Styling for profile circle
                   title={user?.username} // Tooltip for username
                 >
-                  <UserCircle2 size={30} /> {/* Profile Icon */}
+                  {user?.avatar_url ? (
+                    <img 
+                      src={user.avatar_url} 
+                      alt="Profile Picture" 
+                      className={classes.profile_picture}
+                    />
+                  ) : (
+                    <div className={classes.profile_picture_placeholder}>
+                      {getUserInitial(user?.username)}
+                    </div>
+                  )}
                 </Nav.Link>
               </>
             ) : (

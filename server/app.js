@@ -1,6 +1,5 @@
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
 const cors = require("cors");
 const db = require("./config/dbConfig"); // Assuming dbConfig provides your database connection
 const initializeDatabase = require("./config/TableSchema"); // Assuming this sets up your tables
@@ -8,17 +7,14 @@ const authMiddleware = require("./middleware/authMiddleware"); // Your existing 
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
+// Import the socket setup function
+const setupSocket = require("./socket");
+
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:5173", // Your frontend URL
-    methods: ["GET", "POST"],
-  },
-});
 
 app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json({ limit: "5000mb" })); // Increased limit for larger file/voice data
+app.use(express.json({ limit: "50mb" })); // Increased limit for larger file/voice data
 
 // Public route
 app.get("/", (req, res) => {
@@ -131,10 +127,120 @@ app.use("/api/v1", questionRoutes);
 const answerRoutes = require("./routes/answerRoute");
 app.use("/api/v1", answerRoutes);
 
-const initializeSocket = require('./socket');
-initializeSocket(io, db);
+// Endpoint to fetch chat history for a room (optional, primarily for initial load)
+app.get("/api/chat/history/:roomId", authenticateToken, async (req, res) => {
+  const { roomId } = req.params;
+  const { type, targetuserid } = req.query; // Add query params for message type and target user
+  const userid = req.user.userid; // Current authenticated user
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server running and listening on port ${PORT}`);
+  try {
+    let query;
+    let params;
+
+    if (type === "private" && targetuserid) {
+      const dmRoomId = getPrivateChatRoomId(userid, targetuserid);
+      query = `
+        SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+        FROM chat_messages
+        WHERE room_id = ? AND message_type = 'private'
+        ORDER BY created_at ASC LIMIT 200;
+      `;
+      params = [dmRoomId];
+    } else {
+      // Default to public if type is not private or targetuserid is missing
+      query = `
+        SELECT message_id, userid, username, avatar_url, message_text, room_id, message_type, recipient_id, created_at, edited_at, is_deleted, reactions, file_data, file_name, file_type, audio_data, audio_type, audio_duration
+        FROM chat_messages
+        WHERE room_id = ? AND message_type = 'public'
+        ORDER BY created_at ASC LIMIT 200;`;
+      params = [roomId];
+    }
+
+    const [messages] = await db.query(query, params);
+    const formattedMessages = messages.map((msg) => {
+      return {
+        ...msg,
+        reactions: parseReactionsSafely(msg.reactions, msg.message_id),
+        file_data: msg.file_data || null,
+        file_name: msg.file_name || null,
+        file_type: msg.file_type || null,
+        audio_data: msg.audio_data || null,
+        audio_type: msg.audio_type || null,
+        audio_duration: msg.audio_duration || null,
+      };
+    });
+    res.status(200).json(formattedMessages);
+  } catch (error) {
+    console.error("Error fetching chat history via HTTP:", error);
+    res.status(500).json({ message: "Server error fetching chat history" });
+  }
 });
+
+// Helper function to generate a consistent private chat room ID
+// Ensures that DM between User A and User B always has the same room ID (e.g., "1-2" not "2-1")
+function getPrivateChatRoomId(user1Id, user2Id) {
+  const sortedIds = [user1Id, user2Id].sort();
+  return `${sortedIds[0]}-${sortedIds[1]}`;
+}
+
+// Helper function for robust JSON parsing of reactions
+function parseReactionsSafely(reactionsString, messageId = "unknown") {
+  if (
+    typeof reactionsString === "string" &&
+    reactionsString.trim().length > 0 &&
+    reactionsString !== "[object Object]"
+  ) {
+    try {
+      return JSON.parse(reactionsString);
+    } catch (e) {
+      console.error(
+        `Error parsing reactions for message ID ${messageId}: ${e.message}. Raw reactions: '${reactionsString}'`
+      );
+      // Fallback to empty array if parsing fails
+      return [];
+    }
+  } else if (reactionsString === "[object Object]") {
+    // Handle the case where "[object Object]" string was stored
+    console.warn(
+      `Malformed reaction data "[object Object]" found for message ID ${messageId}. Initializing reactions to empty.`
+    );
+    return [];
+  }
+  return []; // Default for null, undefined, empty string, or non-string types
+}
+
+// ==============================================
+// In-memory store for currently active users (based on connection AND activity)
+const activeUsers = {}; // { userid: { userid, username, avatar_url, sid, lastActivity, currentRoomId } }
+const ACTIVITY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
+let lastKnownActiveUsersCount = 0; // Tracks the count for broadcasting updates
+
+// Define the public chat room ID
+const PUBLIC_CHAT_ROOM_ID = "stackoverflow_lobby";
+// ==============================================
+
+// Main function to start the server after database initialization
+async function startServer() {
+  try {
+    // 1. Initialize the database first
+    await initializeDatabase();
+    console.log("Database initialized successfully on app startup.");
+
+    // 2. Setup socket.io using the extracted function
+    setupSocket(server);
+
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, () => {
+      console.log(`Server running and listening on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error(
+      "Failed to start server due to database initialization error:",
+      error
+    );
+    process.exit(1); // Exit the process if critical database initialization fails
+  }
+}
+
+// Call the main function to start the server
+startServer();

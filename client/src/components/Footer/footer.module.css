@@ -1,46 +1,47 @@
-
 .footer{
-    background-color: #3B455A;
-    color: white;
+    background-color: var(--bg-secondary);
+    color: var(--text-color);
     justify-content: center;
     display: flex;
     justify-content: space-around;
     padding-top: 2.5rem;
+    border-top: 1px solid var(--border-color);
+    transition: background-color var(--transition-normal), color var(--transition-normal), border-color var(--transition-normal);
 }
 .footer h5{
-    color: #FFFFFF;
-
+    color: var(--text-color);
 }
 .footer_icons{
     width: 20%;
     display: flex;
     justify-content: space-between;
     margin: 20px 0;
-    color: white;
-    transition: color 0.3s ease;
+    color: var(--text-color);
+    transition: color var(--transition-normal);
     cursor: pointer;
 }
 .footer_icons a:hover{
     transform: scale(1.09);
-    color: var(--primary-color)
+    color: var(--primary-color);
 }
 .footer_icons a{
-    color: #e3e1e1f3;
+    color: var(--text-secondary);
     justify-content: space-between;
     margin: 0 15px;
     font-size: 50px;
     max-width: 10rem;
+    transition: color var(--transition-normal), transform var(--transition-normal);
 }
 .footer_contacts li{
     list-style: none;
-    color: #959CA4;
+    color: var(--text-secondary);
     margin: 0.2rem ;
     padding: 0.2rem;
     font-size: 1rem;
 }
 .footer_links li{
     list-style: none;
-    color: #959CA4;
+    color: var(--text-secondary);
     margin: 0.2rem ;
     padding: 0.2rem;
     font-size: 1rem;
@@ -51,9 +52,12 @@
 .footer_ul a{
     display: flex;
     flex-direction: column;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color var(--transition-normal);
 }
 .footer_ul a:hover{
-    color: white !important;
+    color: var(--text-color) !important;
 }
 
 .footer_logo img{
@@ -62,11 +66,11 @@
 }
 .privacy:hover{
     transform: scale(1.09);
-    color: white !important;
+    color: var(--text-color) !important;
 }
 .linkBar:hover{
     transform: scale(1.09);
-    color: white !important;
+    color: var(--text-color) !important;
 }
 .footer_contacts ul{
     padding: 0 !important;
@@ -74,12 +78,13 @@
 }
 .linkBar{
     text-Decoration: "none";
-    color: #959CA4 !important    
+    color: var(--text-secondary) !important;
+    transition: color var(--transition-normal), transform var(--transition-normal);
 }
 
 .footer_ul Link{
     text-Decoration: "none";
-    color: #959CA4 !important
+    color: var(--text-secondary) !important;
 }
 .linkBar a {
   color: inherit;
@@ -98,7 +103,7 @@
   padding: 4rem;
 }
 .terms{
-    color: #344767;
+    color: var(--text-color);
     margin: 6rem;
     font-size: 1.17rem;
 }
@@ -110,7 +115,7 @@
 }
 .terms h2{
     font-weight: bold;
-    color: black;
+    color: var(--text-color);
 }
 .terms p{ 
     padding: 5px;
@@ -118,22 +123,53 @@
 .footer_contacts h4{
     font-size: 20px;
     font-weight: bold;
+    color: var(--text-color);
 }
 
 @media screen and (max-width: 768px) {
     .footer {
       flex-direction: column;
-      align-items:first baseline;
+      align-items: first baseline;
       justify-content: center;
       padding-left: 5rem;
     }
     h1,h2,h3,h4,h5,h6{
-      color: #ffffff;
+      color: var(--text-color);
     }
     .footer_contacts{
       margin-left: 2rem !important;
     }
     .footer_links h4{
-      align-items:first baseline;
+      align-items: first baseline;
+    }
+    .footer_icons {
+      width: 100%;
+      justify-content: center;
+      margin: 15px 0;
+    }
+    .footer_icons a {
+      font-size: 40px;
+      margin: 0 10px;
+    }
+  }
+
+@media screen and (max-width: 480px) {
+    .footer {
+      padding-left: 2rem;
+      padding-top: 2rem;
+    }
+    .footer_contacts {
+      margin-left: 1rem !important;
+    }
+    .footer_icons a {
+      font-size: 35px;
+      margin: 0 8px;
+    }
+    .footer_logo img {
+      max-width: 30rem;
+    }
+    .terms {
+      margin: 3rem 2rem;
+      font-size: 1rem;
     }
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import Swal from "sweetalert2";
@@ -11,12 +11,16 @@ import {
   Edit,
   Loader,
   CalendarDays,
+  Camera,
+  Upload,
 } from "lucide-react";
 import classes from "./UserProfile.module.css";
 
 // 🔻 You will manage the correct pa/ths for these
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
+import { UserState } from "../../App.jsx";
+import { axiosInstance } from "../../utility/axios";
 
 function UserProfile() {
   const { userid } = useParams();
@@ -28,6 +32,157 @@ function UserProfile() {
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  
+  // Profile picture states
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
+  
+  // Get global user state and setUser function
+  const { user, setUser, refreshUserData } = useContext(UserState);
+
+  // Utility function to get user initial for avatar placeholder
+  const getUserInitial = (username) => {
+    return username ? username.charAt(0).toUpperCase() : "?";
+  };
+
+  // Handle file selection
+  const handleImageSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        Swal.fire({
+          icon: "error",
+          title: "Invalid File Type",
+          text: "Please select an image file (JPG, PNG, GIF, etc.)",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({
+          icon: "error",
+          title: "File Too Large",
+          text: "Please select an image smaller than 5MB",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle image upload
+  const handleImageUpload = async () => {
+    if (!selectedImage) {
+      Swal.fire({
+        icon: "warning",
+        title: "No Image Selected",
+        text: "Please select an image to upload",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      Swal.fire({
+        icon: "error",
+        title: "Authentication Required",
+        text: "You are not logged in. Please log in to upload a profile picture.",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64Image = e.target.result;
+        console.log("Profile picture base64 data length:", base64Image.length);
+        console.log("Profile picture base64 data starts with:", base64Image.substring(0, 50));
+        
+        // Upload to backend
+        const response = await axiosInstance.put(
+          `/user/${userid}`,
+          { avatar_url: base64Image },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        console.log("UserProfile: Image upload response:", response.data);
+
+        // Update local state
+        setUserData(prev => ({ ...prev, avatar_url: base64Image }));
+        setSelectedImage(null);
+        setImagePreview(null);
+        
+        console.log("UserProfile: Profile picture uploaded successfully. Refreshing user data...");
+        
+        // Refresh global user data from server
+        await refreshUserData();
+        
+        console.log("UserProfile: User data refreshed. Current user state:", user);
+        
+        Swal.fire({
+          icon: "success",
+          title: "Profile Picture Updated!",
+          text: "Your profile picture has been updated successfully.",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+      };
+      reader.readAsDataURL(selectedImage);
+    } catch (err) {
+      const msg = err.response?.data?.Msg || "Failed to upload profile picture. Please try again.";
+      Swal.fire({
+        icon: "error",
+        title: "Upload Failed",
+        text: msg,
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Remove selected image
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -38,20 +193,55 @@ function UserProfile() {
           icon: "error",
           title: "Authentication Required",
           text: "You are not logged in. Please log in to view your profile.",
-          confirmButtonColor: "var(--red-error)",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
         return;
       }
 
+      // Use authenticated user's ID if available, otherwise use URL parameter
+      const targetUserid = user?.userid || userid;
+      console.log("UserProfile: Using target userid:", targetUserid);
+      console.log("UserProfile: URL userid:", userid);
+      console.log("UserProfile: Authenticated userid:", user?.userid);
+
+      // Test if backend is responding
       try {
-        const response = await axios.get(
-          `http://localhost:5000/api/v1/user/${userid}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        console.log("UserProfile: Testing backend connectivity...");
+        const testResponse = await axiosInstance.get("/user/test");
+        console.log("UserProfile: Backend test response:", testResponse.data);
+      } catch (testErr) {
+        console.error("UserProfile: Backend connectivity test failed:", testErr);
+        console.error("UserProfile: Test error response:", testErr.response);
+        console.error("UserProfile: Test error status:", testErr.response?.status);
+        console.error("UserProfile: Test error data:", testErr.response?.data);
+        
+        // Test if user check endpoint is working
+        try {
+          console.log("UserProfile: Testing user check endpoint...");
+          const checkResponse = await axiosInstance.get("/user/check");
+          console.log("UserProfile: User check response:", checkResponse.data);
+        } catch (checkErr) {
+          console.error("UserProfile: User check test failed:", checkErr);
+          console.error("UserProfile: Check error response:", checkErr.response);
+          console.error("UserProfile: Check error status:", checkErr.response?.status);
+        }
+        
+        // Test if server root is responding
+        try {
+          console.log("UserProfile: Testing server root endpoint...");
+          const rootResponse = await axios.get("http://localhost:5000/");
+          console.log("UserProfile: Server root response:", rootResponse.data);
+        } catch (rootErr) {
+          console.error("UserProfile: Server root test also failed:", rootErr);
+          console.error("UserProfile: This suggests the server is not running or not accessible");
+        }
+      }
+
+      try {
+        console.log("UserProfile: Making API call to fetch user data...");
+        const response = await axiosInstance.get(`/user/${targetUserid}`);
         const { fullname, username, email } = response.data;
         setUserData(response.data);
         setEditFullname(fullname || "");
@@ -61,19 +251,33 @@ function UserProfile() {
         setConfirmPassword("");
         setError(null);
       } catch (err) {
+        console.error("UserProfile: Error fetching user data:", err);
+        console.error("UserProfile: Error response:", err.response);
+        console.error("UserProfile: Error status:", err.response?.status);
+        console.error("UserProfile: Error data:", err.response?.data);
+        console.error("UserProfile: Error message:", err.message);
+        console.error("UserProfile: Error stack:", err.stack);
+        
+        // Log the full error object
+        console.error("UserProfile: Full error object:", JSON.stringify(err, null, 2));
+        
         let errorMessage = "Failed to load user profile. Please try again.";
         if (err.response?.status === 401) {
           errorMessage =
             "Session expired or unauthorized. Please log in again.";
         } else if (err.response?.data?.Msg) {
           errorMessage = err.response.data.Msg;
+        } else if (err.response?.data?.msg) {
+          errorMessage = err.response.data.msg;
         }
         setError(errorMessage);
         Swal.fire({
           icon: "error",
           title: "Error Fetching Profile",
           text: errorMessage,
-          confirmButtonColor: "var(--red-error)",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
         setUserData(null);
       }
@@ -87,7 +291,9 @@ function UserProfile() {
         icon: "warning",
         title: "Missing User ID",
         text: warning,
-        confirmButtonColor: "var(--yellow-warning)",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
   }, [userid]);
@@ -109,7 +315,9 @@ function UserProfile() {
       icon: "info",
       title: "Edit Cancelled",
       text: "Your changes have been discarded.",
-      confirmButtonColor: "var(--info-blue)",
+      timer: 2000,
+      timerProgressBar: true,
+      showConfirmButton: false,
     });
   };
 
@@ -129,7 +337,9 @@ function UserProfile() {
         icon: "warning",
         title: "Password Mismatch",
         text: "New password and confirm password do not match.",
-        confirmButtonColor: "var(--yellow-warning)",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
 
@@ -138,7 +348,9 @@ function UserProfile() {
         icon: "warning",
         title: "Password Too Short",
         text: "Password should be at least 8 characters long.",
-        confirmButtonColor: "var(--yellow-warning)",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
 
@@ -155,19 +367,16 @@ function UserProfile() {
         icon: "error",
         title: "Authentication Required",
         text: "You are not logged in. Please log in to update your profile.",
-        confirmButtonColor: "var(--red-error)",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     }
 
     try {
-      const response = await axios.put(
-        `http://localhost:5000/api/v1/user/${userid}`,
-        updatedData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const response = await axiosInstance.put(
+        `/user/${userid}`,
+        updatedData
       );
       setUserData((prev) => ({ ...prev, ...updatedData }));
       setIsEditing(false);
@@ -178,7 +387,9 @@ function UserProfile() {
         title: "Profile Updated!",
         text:
           response.data.msg || "Your profile has been updated successfully.",
-        confirmButtonColor: "var(--green-success)",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
     } catch (err) {
       const msg =
@@ -188,7 +399,9 @@ function UserProfile() {
         icon: "error",
         title: "Update Failed",
         text: msg,
-        confirmButtonColor: "var(--red-error)",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       setError(msg);
     }
@@ -223,6 +436,84 @@ function UserProfile() {
           <>
             <h2 className={classes.title}>User Profile</h2>
             <div className={classes.profile_card}>
+              {/* Profile Picture Section */}
+              <div className={classes.profile_picture_section}>
+                <div className={classes.profile_picture_container}>
+                  {userData.avatar_url ? (
+                    <img 
+                      src={userData.avatar_url} 
+                      alt="Profile Picture" 
+                      className={classes.profile_picture}
+                    />
+                  ) : (
+                    <div className={classes.profile_picture_placeholder}>
+                      {getUserInitial(userData.username)}
+                    </div>
+                  )}
+                </div>
+                
+                {isEditing && (
+                  <div className={classes.profile_picture_upload}>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      style={{ display: 'none' }}
+                    />
+                    
+                    <div className={classes.upload_controls}>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className={classes.select_image_btn}
+                        disabled={isUploading}
+                      >
+                        <Camera className={classes.icon_button} /> Select Image
+                      </button>
+                      
+                      {selectedImage && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={handleImageUpload}
+                            className={classes.upload_btn}
+                            disabled={isUploading}
+                          >
+                            <Upload className={classes.icon_button} />
+                            {isUploading ? "Uploading..." : "Upload"}
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={handleRemoveImage}
+                            className={classes.remove_btn}
+                            disabled={isUploading}
+                          >
+                            <XCircle className={classes.icon_button} /> Remove
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    
+                    {imagePreview && (
+                      <div className={classes.image_preview}>
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className={classes.preview_image}
+                        />
+                        <p className={classes.preview_text}>Preview</p>
+                      </div>
+                    )}
+                    
+                    <p className={classes.upload_info}>
+                      Supported formats: JPG, PNG, GIF (Max 5MB)
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {isEditing ? (
                 <form onSubmit={handleSaveClick} className={classes.form}>
                   <div className={classes.form_group}>

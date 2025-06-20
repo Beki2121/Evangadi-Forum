@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import Header from "../components/Header/Header.jsx";
 import Footer from "../components/Footer/Footer.jsx";
 import Chatbot from "../components/Chatbot/Chatbot.jsx";
-import { useAuth } from "../contexts/AuthContext.jsx"; // ✅ Import AuthContext
+import { UserState } from "../App.jsx"; // Use UserState instead of AuthContext
 import classes from "./Layout.module.css";
 
 function Layout({ children }) {
-  const { isAuthenticated, loading } = useAuth(); // ✅ Get auth state
+  const { user } = useContext(UserState); // Get user from UserState
   const [showChatbot, setShowChatbot] = useState(false);
   const [chatbotAnimating, setChatbotAnimating] = useState(false);
 
@@ -52,31 +52,30 @@ function Layout({ children }) {
       <Header />
       <div style={{ minHeight: "100vh" }}>{children}</div>
 
-      {!loading &&
-        isAuthenticated && ( // ✅ Show chatbot only after login check is complete and user is logged in
-          <>
-            <div
-              className={classes.chatbotToggleArea}
-              onClick={toggleChatbotVisibility}
-              title={showChatbot ? "Hide Chatbot" : "Ask Chatbot"}
-              ref={chatbotToggleButtonRef}
-            >
-              <span className={classes.askChatbotText}>Ask Chatbot</span>
-              <span className={classes.chatbotIcon}>🤖</span>
-            </div>
+      {user && ( // Show chatbot only when user is logged in
+        <>
+          <div
+            className={classes.chatbotToggleArea}
+            onClick={toggleChatbotVisibility}
+            title={showChatbot ? "Hide Chatbot" : "Ask Chatbot"}
+            ref={chatbotToggleButtonRef}
+          >
+            <span className={classes.askChatbotText}>Ask Chatbot</span>
+            <span className={classes.chatbotIcon}>🤖</span>
+          </div>
 
-            {showChatbot && (
-              <div
-                className={`${classes.chatbotColumn} ${
-                  chatbotAnimating ? classes.fadeIn : classes.fadeOut
-                }`}
-                ref={chatbotRef}
-              >
-                <Chatbot />
-              </div>
-            )}
-          </>
-        )}
+          {showChatbot && (
+            <div
+              className={`${classes.chatbotColumn} ${
+                chatbotAnimating ? classes.fadeIn : classes.fadeOut
+              }`}
+              ref={chatbotRef}
+            >
+              <Chatbot />
+            </div>
+          )}
+        </>
+      )}
 
       <Footer />
     </div>

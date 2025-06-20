@@ -91,7 +91,9 @@ async function rateAnswer(req, res) {
     await connection.beginTransaction(); // Start a transaction for atomicity
 
     const newRatingValue = ratingType === "upvote" ? 1 : -1; // Value to store in DB
-    let currentRatingChange = 0; // The change to apply to answer.rating_count
+    let upvoteChange = 0; // Change to apply to upvote_count
+    let downvoteChange = 0; // Change to apply to downvote_count
+    let ratingChange = 0; // Change to apply to rating_count (for backward compatibility)
 
     // 1. Check if the user has already rated this answer
     // Corrected column names: `ratingid`, `answerid`, `userid`, `vote_type`
@@ -111,14 +113,32 @@ async function rateAnswer(req, res) {
           "DELETE FROM answer_ratings WHERE ratingid = ?", // Corrected column name
           [existingRatingId]
         );
-        currentRatingChange = -oldVoteType; // Reverse the effect of the previous vote
+        
+        // Remove the vote from its respective counter
+        if (oldVoteType === 1) {
+          upvoteChange = -1;
+        } else {
+          downvoteChange = -1;
+        }
+        ratingChange = -oldVoteType;
       } else {
         // User changed their rating (e.g., from upvote (1) to downvote (-1) or vice-versa)
         await connection.query(
           "UPDATE answer_ratings SET vote_type = ? WHERE ratingid = ?", // Corrected column names
           [newRatingValue, existingRatingId] // Store the numeric value (1 or -1)
         );
-        currentRatingChange = newRatingValue - oldVoteType; // Calculate the difference
+        
+        // Remove from old counter and add to new counter
+        if (oldVoteType === 1) {
+          // Was upvote, now downvote
+          upvoteChange = -1; // Remove from upvote count
+          downvoteChange = 1; // Add to downvote count
+        } else {
+          // Was downvote, now upvote
+          upvoteChange = 1; // Add to upvote count
+          downvoteChange = -1; // Remove from downvote count
+        }
+        ratingChange = newRatingValue - oldVoteType;
       }
     } else {
       // User is rating for the first time
@@ -127,26 +147,39 @@ async function rateAnswer(req, res) {
         "INSERT INTO answer_ratings (answerid, userid, vote_type) VALUES (?, ?, ?)",
         [answerId, userid, newRatingValue] // Store the numeric value (1 or -1)
       );
-      currentRatingChange = newRatingValue; // Add the new vote's value
+      
+      // Add the new vote to its respective counter
+      if (newRatingValue === 1) {
+        upvoteChange = 1;
+      } else {
+        downvoteChange = 1;
+      }
+      ratingChange = newRatingValue;
     }
 
-    // 2. Update the total rating count in the 'answers' table
+    // 2. Update the counts in the 'answers' table
     await connection.query(
-      "UPDATE answers SET rating_count = rating_count + ? WHERE answerid = ?",
-      [currentRatingChange, answerId]
+      `UPDATE answers 
+       SET rating_count = rating_count + ?, 
+           upvote_count = upvote_count + ?, 
+           downvote_count = downvote_count + ? 
+       WHERE answerid = ?`,
+      [ratingChange, upvoteChange, downvoteChange, answerId]
     );
 
-    // 3. Get the new total rating for the answer to send back to the frontend
+    // 3. Get the new counts for the answer to send back to the frontend
     const [updatedAnswer] = await connection.query(
-      "SELECT rating_count FROM answers WHERE answerid = ?",
+      "SELECT rating_count, upvote_count, downvote_count FROM answers WHERE answerid = ?",
       [answerId]
     );
 
-    await connection.commit(); // Commit all changes if everything succeeded
+    await connection.commit();
 
     res.status(StatusCodes.OK).json({
       msg: "Rating updated successfully",
       newTotalRating: updatedAnswer[0].rating_count,
+      newUpvoteCount: updatedAnswer[0].upvote_count,
+      newDownvoteCount: updatedAnswer[0].downvote_count,
     });
   } catch (error) {
     if (connection) {

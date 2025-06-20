@@ -12,6 +12,8 @@ function Login({ onSwitch }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useContext(UserState);
 
   const [formData, setFormData] = useState({
     usernameOrEmail: "",
@@ -38,18 +40,20 @@ function Login({ onSwitch }) {
         usernameOrEmail: formData.usernameOrEmail,
         password: formData.password,
       });
-      // console.log(response.data)
-      localStorage.setItem("token", response.data.token); // Store the token in local storage
-      window.location.href = "/"; // This will navigate to the / page and refresh the application
+      
       if (response.status === 200) {
+        // Store token and update authentication state
+        const token = response.data.token;
+        const userData = response.data.user || { username: formData.usernameOrEmail };
+        
+        // Use the login function from UserState context
+        login(userData, token);
+        
         setSuccess("Login successful! Redirecting...");
-        await Swal.fire({
-          title: "Success!",
-          text: "User Loggedin successfully!",
-          icon: "success",
-          confirmButtonText: "OK",
-        });
         setError(null);
+        
+        // Navigate to home page using React Router
+        navigate("/");
       } else {
         setError(response.data.msg || "Login failed.");
         await Swal.fire({
@@ -57,7 +61,9 @@ function Login({ onSwitch }) {
           text:
             response.data.msg || "Error submitting the form. Please try again",
           icon: "error",
-          confirmButtonText: "OK",
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
         });
         setSuccess(null);
       }
@@ -71,7 +77,9 @@ function Login({ onSwitch }) {
           err.response?.data?.msg ||
           "Error submitting the form. Please try again",
         icon: "error",
-        confirmButtonText: "OK",
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
       });
       setSuccess(null);
     }
