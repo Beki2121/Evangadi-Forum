@@ -21,7 +21,7 @@ import EmojiPicker from "emoji-picker-react";
 import Loader from "../../components/Loader/Loader"; // Assuming you have a loader component
 import Swal from "sweetalert2"; // For confirmations
 
-const SOCKET_SERVER_URL = "http://localhost:5000"; // IMPORTANT: Ensure your Socket.IO server is running on this URL
+const SOCKET_SERVER_URL = "https://server.evangadiforum.com"; // IMPORTANT: Ensure your Socket.IO server is running on this URL
 const PUBLIC_CHAT_ROOM_ID = "stackoverflow_lobby"; // Unique ID for the public chat room
 
 // Define common reaction emojis

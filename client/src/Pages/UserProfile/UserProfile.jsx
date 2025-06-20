@@ -32,13 +32,13 @@ function UserProfile() {
   const [editEmail, setEditEmail] = useState("");
   const [editPassword, setEditPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
+
   // Profile picture states
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
-  
+
   // Get global user state and setUser function
   const { user, setUser, refreshUserData } = useContext(UserState);
 
@@ -52,7 +52,7 @@ function UserProfile() {
     const file = event.target.files[0];
     if (file) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
+      if (!file.type.startsWith("image/")) {
         Swal.fire({
           icon: "error",
           title: "Invalid File Type",
@@ -78,7 +78,7 @@ function UserProfile() {
       }
 
       setSelectedImage(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -123,15 +123,18 @@ function UserProfile() {
       reader.onload = async (e) => {
         const base64Image = e.target.result;
         console.log("Profile picture base64 data length:", base64Image.length);
-        console.log("Profile picture base64 data starts with:", base64Image.substring(0, 50));
-        
+        console.log(
+          "Profile picture base64 data starts with:",
+          base64Image.substring(0, 50)
+        );
+
         // Upload to backend
         const response = await axiosInstance.put(
           `/user/${userid}`,
           { avatar_url: base64Image },
           {
             headers: {
-              'Content-Type': 'application/json',
+              "Content-Type": "application/json",
             },
           }
         );
@@ -139,17 +142,22 @@ function UserProfile() {
         console.log("UserProfile: Image upload response:", response.data);
 
         // Update local state
-        setUserData(prev => ({ ...prev, avatar_url: base64Image }));
+        setUserData((prev) => ({ ...prev, avatar_url: base64Image }));
         setSelectedImage(null);
         setImagePreview(null);
-        
-        console.log("UserProfile: Profile picture uploaded successfully. Refreshing user data...");
-        
+
+        console.log(
+          "UserProfile: Profile picture uploaded successfully. Refreshing user data..."
+        );
+
         // Refresh global user data from server
         await refreshUserData();
-        
-        console.log("UserProfile: User data refreshed. Current user state:", user);
-        
+
+        console.log(
+          "UserProfile: User data refreshed. Current user state:",
+          user
+        );
+
         Swal.fire({
           icon: "success",
           title: "Profile Picture Updated!",
@@ -161,7 +169,9 @@ function UserProfile() {
       };
       reader.readAsDataURL(selectedImage);
     } catch (err) {
-      const msg = err.response?.data?.Msg || "Failed to upload profile picture. Please try again.";
+      const msg =
+        err.response?.data?.Msg ||
+        "Failed to upload profile picture. Please try again.";
       Swal.fire({
         icon: "error",
         title: "Upload Failed",
@@ -180,7 +190,7 @@ function UserProfile() {
     setSelectedImage(null);
     setImagePreview(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -212,11 +222,17 @@ function UserProfile() {
         const testResponse = await axiosInstance.get("/user/test");
         console.log("UserProfile: Backend test response:", testResponse.data);
       } catch (testErr) {
-        console.error("UserProfile: Backend connectivity test failed:", testErr);
+        console.error(
+          "UserProfile: Backend connectivity test failed:",
+          testErr
+        );
         console.error("UserProfile: Test error response:", testErr.response);
-        console.error("UserProfile: Test error status:", testErr.response?.status);
+        console.error(
+          "UserProfile: Test error status:",
+          testErr.response?.status
+        );
         console.error("UserProfile: Test error data:", testErr.response?.data);
-        
+
         // Test if user check endpoint is working
         try {
           console.log("UserProfile: Testing user check endpoint...");
@@ -224,18 +240,28 @@ function UserProfile() {
           console.log("UserProfile: User check response:", checkResponse.data);
         } catch (checkErr) {
           console.error("UserProfile: User check test failed:", checkErr);
-          console.error("UserProfile: Check error response:", checkErr.response);
-          console.error("UserProfile: Check error status:", checkErr.response?.status);
+          console.error(
+            "UserProfile: Check error response:",
+            checkErr.response
+          );
+          console.error(
+            "UserProfile: Check error status:",
+            checkErr.response?.status
+          );
         }
-        
+
         // Test if server root is responding
         try {
           console.log("UserProfile: Testing server root endpoint...");
-          const rootResponse = await axios.get("http://localhost:5000/");
+          const rootResponse = await axios.get(
+            "https://server.evangadiforum.com/"
+          );
           console.log("UserProfile: Server root response:", rootResponse.data);
         } catch (rootErr) {
           console.error("UserProfile: Server root test also failed:", rootErr);
-          console.error("UserProfile: This suggests the server is not running or not accessible");
+          console.error(
+            "UserProfile: This suggests the server is not running or not accessible"
+          );
         }
       }
 
@@ -257,10 +283,13 @@ function UserProfile() {
         console.error("UserProfile: Error data:", err.response?.data);
         console.error("UserProfile: Error message:", err.message);
         console.error("UserProfile: Error stack:", err.stack);
-        
+
         // Log the full error object
-        console.error("UserProfile: Full error object:", JSON.stringify(err, null, 2));
-        
+        console.error(
+          "UserProfile: Full error object:",
+          JSON.stringify(err, null, 2)
+        );
+
         let errorMessage = "Failed to load user profile. Please try again.";
         if (err.response?.status === 401) {
           errorMessage =
@@ -374,10 +403,7 @@ function UserProfile() {
     }
 
     try {
-      const response = await axiosInstance.put(
-        `/user/${userid}`,
-        updatedData
-      );
+      const response = await axiosInstance.put(`/user/${userid}`, updatedData);
       setUserData((prev) => ({ ...prev, ...updatedData }));
       setIsEditing(false);
       setEditPassword("");
@@ -440,9 +466,9 @@ function UserProfile() {
               <div className={classes.profile_picture_section}>
                 <div className={classes.profile_picture_container}>
                   {userData.avatar_url ? (
-                    <img 
-                      src={userData.avatar_url} 
-                      alt="Profile Picture" 
+                    <img
+                      src={userData.avatar_url}
+                      alt="Profile Picture"
                       className={classes.profile_picture}
                     />
                   ) : (
@@ -451,7 +477,7 @@ function UserProfile() {
                     </div>
                   )}
                 </div>
-                
+
                 {isEditing && (
                   <div className={classes.profile_picture_upload}>
                     <input
@@ -459,9 +485,9 @@ function UserProfile() {
                       ref={fileInputRef}
                       accept="image/*"
                       onChange={handleImageSelect}
-                      style={{ display: 'none' }}
+                      style={{ display: "none" }}
                     />
-                    
+
                     <div className={classes.upload_controls}>
                       <button
                         type="button"
@@ -471,7 +497,7 @@ function UserProfile() {
                       >
                         <Camera className={classes.icon_button} /> Select Image
                       </button>
-                      
+
                       {selectedImage && (
                         <>
                           <button
@@ -483,7 +509,7 @@ function UserProfile() {
                             <Upload className={classes.icon_button} />
                             {isUploading ? "Uploading..." : "Upload"}
                           </button>
-                          
+
                           <button
                             type="button"
                             onClick={handleRemoveImage}
@@ -495,18 +521,18 @@ function UserProfile() {
                         </>
                       )}
                     </div>
-                    
+
                     {imagePreview && (
                       <div className={classes.image_preview}>
-                        <img 
-                          src={imagePreview} 
-                          alt="Preview" 
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
                           className={classes.preview_image}
                         />
                         <p className={classes.preview_text}>Preview</p>
                       </div>
                     )}
-                    
+
                     <p className={classes.upload_info}>
                       Supported formats: JPG, PNG, GIF (Max 5MB)
                     </p>

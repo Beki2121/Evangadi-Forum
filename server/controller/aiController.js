@@ -102,7 +102,7 @@ async function chatWithAI(req, res) {
 User message: ${message}
 
 Previous conversation context:
-${limitedHistory.map(msg => `${msg.role}: ${msg.parts[0].text}`).join('\n')}
+${limitedHistory.map((msg) => `${msg.role}: ${msg.parts[0].text}`).join("\n")}
 
 IMPORTANT: Provide a complete, detailed response that finishes properly. Do not stop mid-sentence.`;
 
@@ -121,7 +121,7 @@ IMPORTANT: Provide a complete, detailed response that finishes properly. Do not 
           candidateCount: 1,
         },
       });
-      
+
       let aiText = "";
       for await (const chunk of result.stream) {
         const chunkText = chunk.text();
@@ -135,13 +135,22 @@ IMPORTANT: Provide a complete, detailed response that finishes properly. Do not 
       console.log("AI Response length:", aiText.length);
       console.log("AI Response preview:", aiText.substring(0, 200) + "...");
       console.log("AI Response full:", aiText);
-      console.log("Response finish reason:", result.response?.responseMetadata?.finishReason);
-      console.log("Response safety ratings:", result.response?.responseMetadata?.safetyRatings);
+      console.log(
+        "Response finish reason:",
+        result.response?.responseMetadata?.finishReason
+      );
+      console.log(
+        "Response safety ratings:",
+        result.response?.responseMetadata?.safetyRatings
+      );
 
       await saveMessageToDb(sessionId, userid, "model", aiText);
     } catch (streamError) {
-      console.log("Streaming failed, trying regular generateContent:", streamError.message);
-      
+      console.log(
+        "Streaming failed, trying regular generateContent:",
+        streamError.message
+      );
+
       // Fallback to regular generateContent
       const result = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -153,11 +162,11 @@ IMPORTANT: Provide a complete, detailed response that finishes properly. Do not 
           candidateCount: 1,
         },
       });
-      
+
       if (!result || !result.response) {
         throw new Error("No response received from AI model");
       }
-      
+
       const response = await result.response;
       const aiText = response.text();
 
@@ -166,7 +175,10 @@ IMPORTANT: Provide a complete, detailed response that finishes properly. Do not 
       }
 
       console.log("AI Response length (fallback):", aiText.length);
-      console.log("AI Response preview (fallback):", aiText.substring(0, 200) + "...");
+      console.log(
+        "AI Response preview (fallback):",
+        aiText.substring(0, 200) + "..."
+      );
       console.log("AI Response full (fallback):", aiText);
 
       await saveMessageToDb(sessionId, userid, "model", aiText);
