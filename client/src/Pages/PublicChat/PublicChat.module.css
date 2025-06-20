@@ -902,16 +902,6 @@ body {
   flex-shrink: 0;
 }
 
-.onlineIndicatorSmall {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  background-color: var(--success-color);
-  border-radius: 50%;
-  margin-left: 5px;
-  animation: pulse-green 1.5s infinite ease-out; /* Re-use animation */
-}
-
 .selectUserButton {
   background-color: var(--primary-color);
   color: white;
@@ -1459,31 +1449,27 @@ body {
   padding: 5px 10px;
   min-height: 20px; /* Prevent layout shift */
 }
+
 .onlineIndicatorSmall {
   display: inline-block;
-  width: 20px;
-  height: 4px;
+  width: 12px;
+  height: 12px;
   background: #4caf50;
-  border-radius: 2px;
+  border-radius: 50%;
   margin-left: 8px;
   animation: blink 1s infinite;
 }
 
 @keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.2;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
 }
 
 .offlineIndicatorSmall {
   display: inline-block;
-  width: 20px;
-  height: 4px;
+  width: 12px;
+  height: 12px;
   background: #bbb;
-  border-radius: 2px;
+  border-radius: 50%;
   margin-left: 8px;
 }

@@ -1211,53 +1211,62 @@ const PublicChat = () => {
                 <p>No other registered users found.</p>
               ) : (
                 <ul className={styles.userList}>
-                  {registeredUsers.map((u) => {
-                    console.log("Registered:", u.userid, "Online:", onlineUsers.map(o => o.userid));
-                    return (
-                      <li key={u.userid} className={styles.userListItem}>
-                        <div className={styles.userInfo}>
-                          {u.avatar_url ? (
-                            <img
-                              src={u.avatar_url}
-                              alt={`${u.username}'s avatar`}
-                              className={styles.userListAvatar}
-                            />
-                          ) : (
-                            <div className={styles.userListAvatarPlaceholder}>
-                              {getUserInitial(u.username)}
-                            </div>
-                          )}
-                          <span>{u.username}</span>
-                          {onlineUsers.some(
-                            (onlineUser) => String(onlineUser.userid) === String(u.userid)
-                          ) ? (
-                            <span
-                              className={styles.onlineIndicatorSmall}
-                              title="Online"
-                            ></span>
-                          ) : (
-                            <span
-                              className={styles.offlineIndicatorSmall}
-                              title="Offline"
-                            ></span>
-                          )}
-                        </div>
-                        <button
-                          className={styles.selectUserButton}
-                          onClick={() => {
-                            switchChatMode("private", {
-                              userid: u.userid,
-                              username: u.username,
-                              avatar_url: u.avatar_url,
-                            });
-                            setShowRegisteredUsersModal(false); // Close modal
-                          }}
-                        >
-                          Chat <FiMessageCircle />
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {registeredUsers
+                    .slice()
+                    .sort((a, b) => {
+                      const aOnline = onlineUsers.some((o) => String(o.userid) === String(a.userid));
+                      const bOnline = onlineUsers.some((o) => String(o.userid) === String(b.userid));
+                      if (aOnline && !bOnline) return -1;
+                      if (!aOnline && bOnline) return 1;
+                      return 0;
+                    })
+                    .map((u) => {
+                      console.log("Registered:", u.userid, "Online:", onlineUsers.map(o => o.userid));
+                      return (
+                        <li key={u.userid} className={styles.userListItem}>
+                          <div className={styles.userInfo}>
+                            {u.avatar_url ? (
+                              <img
+                                src={u.avatar_url}
+                                alt={`${u.username}'s avatar`}
+                                className={styles.userListAvatar}
+                              />
+                            ) : (
+                              <div className={styles.userListAvatarPlaceholder}>
+                                {getUserInitial(u.username)}
+                              </div>
+                            )}
+                            <span>{u.username}</span>
+                            {onlineUsers.some(
+                              (onlineUser) => String(onlineUser.userid) === String(u.userid)
+                            ) ? (
+                              <span
+                                className={styles.onlineIndicatorSmall}
+                                title="Online"
+                              ></span>
+                            ) : (
+                              <span
+                                className={styles.offlineIndicatorSmall}
+                                title="Offline"
+                              ></span>
+                            )}
+                          </div>
+                          <button
+                            className={styles.selectUserButton}
+                            onClick={() => {
+                              switchChatMode("private", {
+                                userid: u.userid,
+                                username: u.username,
+                                avatar_url: u.avatar_url,
+                              });
+                              setShowRegisteredUsersModal(false); // Close modal
+                            }}
+                          >
+                            Chat <FiMessageCircle />
+                          </button>
+                        </li>
+                      );
+                    })}
                 </ul>
               )}
             </div>
