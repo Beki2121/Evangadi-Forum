@@ -1473,3 +1473,117 @@ body {
   border-radius: 50%;
   margin-left: 8px;
 }
+
+.chatBody {
+  display: flex;
+  flex: 1;
+  overflow: hidden; /* Prevent parent from scrolling */
+}
+
+.userListSidebar {
+  width: 240px;
+  background-color: var(--background-dark);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.userListHeader {
+  padding: 15px;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-color);
+  background-color: #e2e8f0;
+}
+
+.userList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.userListItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.2s ease;
+}
+
+.userListItem:hover {
+  background-color: #dbeafe; /* Light blue hover */
+}
+
+.userListItem.activeUser {
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 600;
+}
+
+.userAvatar {
+  position: relative;
+  margin-right: 12px;
+}
+
+.avatarImage {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--primary-dark);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.onlineIndicatorSmall {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background-color: var(--success-color);
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.username {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mainChatArea {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Key for independent scrolling */
+}
+
+.onlineUsersDisplay {
+  padding: 10px 25px;
+  background-color: var(--background-dark);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--text-light);
+}

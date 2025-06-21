@@ -567,6 +567,19 @@ const PublicChat = () => {
   };
 
   const switchChatMode = (mode, recipient = null) => {
+    // If switching to private mode without a specific recipient,
+    // default to the first user in the list.
+    if (mode === "private" && recipient === null) {
+      const sortedUsers = getSortedUsers();
+      if (sortedUsers.length > 0) {
+        recipient = sortedUsers[0];
+      }
+    }
+
+    if (mode === chatMode && recipient?.userid === currentDmRecipient?.userid) {
+      return; // Avoid unnecessary re-renders if mode and user are the same
+    }
+
     // Prevent switching if recording or editing
     if (isRecording) {
       Swal.fire({
@@ -589,10 +602,6 @@ const PublicChat = () => {
         showConfirmButton: false,
       });
       return;
-    }
-
-    if (chatMode === mode && recipient?.userid === currentDmRecipient?.userid) {
-      return; // Already in this mode/DM, do nothing
     }
 
     // Leave the current room before joining a new one
@@ -1198,7 +1207,7 @@ const PublicChat = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.modalHeader}>
-              <h3>Select a User for Private Chat</h3>
+              <h3>Start a Conversation ({registeredUsers.length} Users)</h3>
               <button
                 className={styles.closeModalButton}
                 onClick={() => setShowRegisteredUsersModal(false)}
