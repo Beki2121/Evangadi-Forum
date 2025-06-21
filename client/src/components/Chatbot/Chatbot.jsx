@@ -27,9 +27,10 @@ const Chatbot = forwardRef((props, ref) => {
   // For now, let's keep messagesEndRef for internal scrolling.
   const messagesEndRef = useRef(null);
 
-  const API_CHAT_URL = "http://localhost:5000/api/ai/chat";
-  const API_HISTORY_URL = "http://localhost:5000/api/ai/history";
-  const API_ALL_SESSIONS_URL = "http://localhost:5000/api/ai/sessions";
+  const API_CHAT_URL = "https://server.evangadiforum.com/api/ai/chat";
+  const API_HISTORY_URL = "https://server.evangadiforum.com/api/ai/history";
+  const API_ALL_SESSIONS_URL =
+    "https://server.evangadiforum.com/api/ai/sessions";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

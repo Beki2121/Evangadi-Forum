@@ -514,22 +514,41 @@ body {
   color: var(--primary-dark);
 }
 
-.typingIndicator {
-  padding: 10px 25px;
-  font-style: italic;
-  color: var(--text-light);
-  font-size: 0.85rem;
-  text-align: center;
-  animation: fadeInOut 2s infinite alternate;
+.typing-indicator {
+  font-size: 0.85em;
+  color: #888;
+  padding: 5px 10px;
+  min-height: 20px; /* Prevent layout shift */
 }
 
-@keyframes fadeInOut {
-  0% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 1;
-  }
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.onlineIndicatorSmall {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background-color: var(--success-color);
+  border-radius: 50%;
+  margin-left: 8px;
+  vertical-align: middle;
+  border: 2px solid white;
+  animation: blink 1s infinite;
+  position: static;
+}
+
+.offlineIndicatorSmall {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background: #bbb;
+  border-radius: 50%;
+  margin-left: 8px;
+  vertical-align: middle;
+  border: 2px solid white;
+  position: static;
 }
 
 .inputForm {
@@ -884,6 +903,12 @@ body {
   font-size: 1rem;
   font-weight: 500;
   color: var(--text-color);
+  flex-grow: 1;
+}
+
+.userAvatar {
+  position: relative;
+  margin-right: 8px;
 }
 
 .userListAvatar,
@@ -900,6 +925,30 @@ body {
   font-size: 1rem;
   font-weight: 600;
   flex-shrink: 0;
+}
+
+/* Online indicator for registered users modal */
+.userAvatar .onlineIndicatorSmall {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background-color: var(--success-color);
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: pulse-green 1.5s infinite ease-out;
+}
+
+.userAvatar .offlineIndicatorSmall {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  background-color: #bbb;
+  border-radius: 50%;
+  border: 2px solid white;
 }
 
 .selectUserButton {
@@ -1450,16 +1499,6 @@ body {
   min-height: 20px; /* Prevent layout shift */
 }
 
-.onlineIndicatorSmall {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  background: #4caf50;
-  border-radius: 50%;
-  margin-left: 8px;
-  animation: blink 1s infinite;
-}
-
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.2; }
@@ -1549,17 +1588,6 @@ body {
   justify-content: center;
   font-weight: 600;
   font-size: 1.1rem;
-}
-
-.onlineIndicatorSmall {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 12px;
-  height: 12px;
-  background-color: var(--success-color);
-  border-radius: 50%;
-  border: 2px solid white;
 }
 
 .username {
